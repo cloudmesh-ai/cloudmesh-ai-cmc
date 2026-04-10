@@ -5,9 +5,9 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "cloudmesh-ai-core"
 dynamic = ["version"]
-description = "CME: Custom Managed Extensions Core"
+description = "CMC: Cloudmesh Command for AI"
 license = {text = "Apache-2.0"}
-keywords = ["cme", "extension", "cli", "click", "cloudmesh"]
+keywords = ["cmc", "extension", "cli", "click", "cloudmesh"]
 dependencies = [
     "click",
     "rich",
@@ -15,7 +15,7 @@ dependencies = [
 ]
 
 [project.scripts]
-cme = "cloudmesh.ai.main:cli"
+cmc = "cloudmesh.ai.main:cli"
 
 [tool.setuptools.dynamic]
 version = {file = ["VERSION"]}
@@ -25,7 +25,7 @@ version = {file = ["VERSION"]}
 package-dir = {"" = "src"}
 
 # [project.entry-points."cloudmesh.ai.extension"]
-# cme = "extension.cme:register"
+# cmc = "extension.cmc:register"
 
 [tool.setuptools.packages.find]
 where = ["src"]

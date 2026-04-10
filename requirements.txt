@@ -5,6 +5,14 @@
 #    pip-compile --output-file=requirements.txt pyproject.toml
 #
 click==8.3.2
-    # via cme (pyproject.toml)
+    # via cloudmesh-ai-core (pyproject.toml)
+markdown-it-py==4.0.0
+    # via rich
+mdurl==0.1.2
+    # via markdown-it-py
+pygments==2.20.0
+    # via rich
+rich==14.3.3
+    # via cloudmesh-ai-core (pyproject.toml)
 shellingham==1.5.4
-    # via cme (pyproject.toml)
+    # via cloudmesh-ai-core (pyproject.toml)

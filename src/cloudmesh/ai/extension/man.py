@@ -8,58 +8,67 @@ from datetime import date
 
 class BaseFormatter:
     """Base class for all formatters to ensure consistent interface."""
-    def format_header(self, date): return ""
+    def format_header(self, date_str): 
+        return f"CME Manual\nGenerated on {date_str}\n{'='*30}\n\n"
+    
     def format_single(self, ctx, name, cmd): 
-        with click.Context(cmd, info_name=name, parent=ctx.parent) as sub_ctx:
+        # Use the parent context or current context to avoid recursion depth issues
+        with click.Context(cmd, info_name=name, parent=ctx) as sub_ctx:
             return f"{name.upper()}\n{'-'*len(name)}\n{cmd.help or ''}\n\n{cmd.get_help(sub_ctx)}\n\n"
-    def format_footer(self): return ""
+    
+    def format_footer(self): 
+        return ""
 
 class HTMLFormatter(BaseFormatter):
-    def format_header(self, date):
+    def format_header(self, date_str):
         return (
             f"<!DOCTYPE html>\n<html>\n<head>\n"
             f"<title>CME Manual</title>\n"
-            f"<style>body{{font-family:sans-serif; margin:40px;}} pre{{background:#f4f4f4; padding:10px;}}</style>\n"
-            f"</head>\n<body>\n<h1>CME Manual</h1><p>Generated on {date}</p>\n<hr>\n"
+            f"<style>\n"
+            f"  body{{font-family:sans-serif; margin:40px; line-height:1.6; max-width:900px; color:#333;}}\n"
+            f"  pre{{background:#f4f4f4; padding:15px; border-left:5px solid #007bff; overflow-x:auto; font-size:0.9em;}}\n"
+            f"  h2{{color:#2c3e50; border-bottom:2px solid #eee; padding-bottom:10px; margin-top:40px; text-transform:uppercase;}}\n"
+            f"  .date{{color:#777; font-style:italic;}}\n"
+            f"</style>\n"
+            f"</head>\n<body>\n<h1>CME Manual</h1><p class='date'>Generated on {date_str}</p>\n<hr>\n"
         )
     def format_single(self, ctx, name, cmd):
-        with click.Context(cmd, info_name=name, parent=ctx.parent) as sub_ctx:
+        with click.Context(cmd, info_name=name, parent=ctx) as sub_ctx:
             help_text = cmd.get_help(sub_ctx)
-            return f"<section><h2>{name}</h2><p>{cmd.help or ''}</p><pre>{help_text}</pre></section>\n"
+            return f"<section><h2>{name}</h2><p><strong>Description:</strong> {cmd.help or 'No description available.'}</p><pre>{help_text}</pre></section>\n"
     def format_footer(self):
         return "</body>\n</html>"
 
 class MarkdownFormatter(BaseFormatter):
-    def format_header(self, date):
-        return f"# CME Manual\nGenerated on {date}\n\n"
+    def format_header(self, date_str):
+        return f"# CME Manual\nGenerated on {date_str}\n\n---\n\n"
     def format_single(self, ctx, name, cmd):
-        with click.Context(cmd, info_name=name, parent=ctx.parent) as sub_ctx:
+        with click.Context(cmd, info_name=name, parent=ctx) as sub_ctx:
             help_text = cmd.get_help(sub_ctx)
             return f"## {name}\n\n{cmd.help or ''}\n\n```text\n{help_text}\n```\n\n"
 
 class RSTFormatter(BaseFormatter):
-    def format_header(self, date):
+    def format_header(self, date_str):
         title = "CME Manual"
-        return f"{'='*len(title)}\n{title}\n{'='*len(title)}\nGenerated on {date}\n\n"
+        return f"{'='*len(title)}\n{title}\n{'='*len(title)}\nGenerated on {date_str}\n\n"
     def format_single(self, ctx, name, cmd):
-        with click.Context(cmd, info_name=name, parent=ctx.parent) as sub_ctx:
+        with click.Context(cmd, info_name=name, parent=ctx) as sub_ctx:
             help_text = cmd.get_help(sub_ctx)
-            return f"{name}\n{'-'*len(name)}\n\n{cmd.help or ''}\n\n::\n\n    " + help_text.replace("\n", "\n    ") + "\n\n"
+            indented_help = "    " + help_text.replace("\n", "\n    ")
+            return f"{name}\n{'-'*len(name)}\n\n{cmd.help or ''}\n\n::\n\n{indented_help}\n\n"
 
 class QMDFormatter(MarkdownFormatter):
     """Quarto Markdown Formatter."""
-    def format_header(self, date):
-        return f"---\ntitle: \"CME Manual\"\ndate: \"{date}\"\nformat: html\n---\n\n"
+    def format_header(self, date_str):
+        return f"---\ntitle: \"CME Manual\"\ndate: \"{date_str}\"\nformat: html\ntoc: true\n---\n\n"
 
 class GroffFormatter(BaseFormatter):
     """Groff (Man page) Formatter."""
-    def format_header(self, date):
-        return f".TH CME 1 \"{date}\" \"CME\" \"User Commands\"\n.SH NAME\ncme \\- Custom Managed Extensions\n"
+    def format_header(self, date_str):
+        return f".TH CME 1 \"{date_str}\" \"CME\" \"User Commands\"\n.SH NAME\ncme \\- Custom Managed Extensions\n"
     def format_single(self, ctx, name, cmd):
-        with click.Context(cmd, info_name=name, parent=ctx.parent) as sub_ctx:
-            help_text = cmd.get_help(sub_ctx)
-            # Basic escaping for groff
-            help_text = help_text.replace("-", "\\-")
+        with click.Context(cmd, info_name=name, parent=ctx) as sub_ctx:
+            help_text = cmd.get_help(sub_ctx).replace("-", "\\-")
             return f".SH {name.upper()}\n{cmd.help or ''}\n.PP\n.nf\n{help_text}\n.fi\n"
 
 # ==============================================================================
@@ -79,34 +88,71 @@ def get_formatter(format_name):
     }
     return formatters.get(format_name.lower(), BaseFormatter())
 
-def generate_manual(ctx, cli, format_name="text"):
+def generate_manual(ctx, target_group, format_name="text"):
     """
-    The CORE function that iterates through the Click CLI 
-    and produces formatted documentation.
+    Iterates through a Click Group and produces documentation.
     """
     formatter = get_formatter(format_name)
     output = []
     
-    # 1. Header
     output.append(formatter.format_header(date.today().strftime("%Y-%m-%d")))
     
-    # 2. Commands
-    # We sort to keep it deterministic
-    sorted_commands = sorted(cli.list_commands(ctx))
-    
-    for name in sorted_commands:
-        cmd = cli.get_command(ctx, name)
-        if cmd:
+    command_names = target_group.list_commands(ctx)
+
+    if not command_names:
+        return f"{output[0]}\nNo commands found in this group.\n"
+
+    for name in sorted(command_names):
+        # Prevent the 'man' command from documenting itself
+        if name == ctx.command.name:
+            continue
+            
+        cmd = target_group.get_command(ctx, name)
+        if cmd and not cmd.hidden:
             output.append(formatter.format_single(ctx, name, cmd))
             
-    # 3. Footer
     output.append(formatter.format_footer())
-    
     return "".join(output)
+
+# ==============================================================================
+# REGISTRATION
+# ==============================================================================
 
 def register(cli):
     """
-    Placeholder register function. 
-    Man is currently called from cloudmesh.ai.extension.command.cmd_man
+    Registers the man command. 
+    Usage: 
+      cmc man
+      cmc man <command>
+      cmc man --format html
     """
-    pass
+    @cli.command(name="man")
+    @click.argument("command_name", required=False)
+    @click.option(
+        "--format", "-f", 
+        default="text", 
+        type=click.Choice(["text", "md", "html", "rst", "qmd", "groff"], case_sensitive=False),
+        help="The output format for the manual."
+    )
+    @click.pass_context
+    def man(ctx, command_name, format):
+        """Generate a manual for all available commands."""
+        
+        # 'cli' passed into register is our Group object. 
+        # 'ctx' is our Context object.
+        
+        if command_name:
+            # Look up a specific command within the group
+            cmd = cli.get_command(ctx, command_name)
+            if cmd:
+                formatter = get_formatter(format)
+                header = formatter.format_header(date.today().strftime("%Y-%m-%d"))
+                content = formatter.format_single(ctx, command_name, cmd)
+                footer = formatter.format_footer()
+                click.echo(f"{header}{content}{footer}")
+            else:
+                click.echo(f"Error: Command '{command_name}' not found.", err=True)
+        else:
+            # Generate the full manual
+            content = generate_manual(ctx, cli, format_name=format)
+            click.echo(content)

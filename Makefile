@@ -38,6 +38,10 @@ install:
 install-ext:
 	cd $(EXT_DIR) && $(PIP) install -e .
 
+requirements:
+	pip-compile --output-file=requirements.txt pyproject.toml
+	$(PIP) install -r requirements.txt
+	
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} +
 	find . -type d -name "*.egg-info" -exec rm -rf {} +
