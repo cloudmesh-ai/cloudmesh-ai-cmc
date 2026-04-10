@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cloudmesh-ai-core"
+dynamic = ["version"]
+description = "CME: Custom Managed Extensions Core"
+license = {text = "Apache-2.0"}
+keywords = ["cme", "extension", "cli", "click", "cloudmesh"]
+dependencies = [
+    "click",
+    "rich",
+    "shellingham",
+]
+
+[project.scripts]
+cme = "cloudmesh.ai.main:cli"
+
+[tool.setuptools.dynamic]
+version = {file = ["VERSION"]}
+
+[tool.setuptools]
+# Tells setuptools to look inside the 'src' directory for packages
+package-dir = {"" = "src"}
+
+# [project.entry-points."cloudmesh.ai.extension"]
+# cme = "extension.cme:register"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["extension*"]
