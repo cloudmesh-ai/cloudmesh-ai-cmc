@@ -18,18 +18,18 @@ console = Console()
 
 
 @click.command(name="load")
+@click.argument("directory", type=click.Path(exists=True))
 @click.option(
-    "--dir", "directory", type=click.Path(exists=True), help="Load from directory"
+    "--name", "-n", help="Custom name for the extension"
 )
-@click.argument("name", required=False)
-def cmd_load(name, directory):
+def cmd_load(directory, name):
     """Register and load a new command."""
     from cloudmesh.ai.main import registry
 
-    if not directory:
-        directory = "."
     registry.register(name, directory)
-    click.echo(f"Loaded and activated: {name or directory}")
+    # Derive the name if not provided for the output message
+    display_name = name or os.path.basename(os.path.abspath(directory))
+    click.echo(f"Loaded and activated: {display_name}")
 
 
 @click.command(name="activate")

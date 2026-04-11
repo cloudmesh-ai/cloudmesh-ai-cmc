@@ -220,10 +220,10 @@ def load_core_extensions(cli):
         pass
 
     if not found_any:
-        print("DEBUG: No core extensions were successfully loaded", flush=True)
+        logger.debug("No core extensions were successfully loaded")
         logger.warning("No core extensions were successfully loaded")
     else:
-        print(f"DEBUG: Successfully loaded core extensions", flush=True)
+        logger.debug("Successfully loaded core extensions")
 
 
 def load_pip_extensions(cli):
@@ -276,15 +276,15 @@ def completion(ctx):
         click.echo(f"# Shell {shell} not supported.")
         return
 
-    click.echo(f"[bold]Current Session Activation:[/bold]")
+    click.echo("Current Session Activation:")
     click.echo(shell_info["eval"])
     click.echo("")
-    click.echo(f"[bold]Permanent Activation (add to {shell_info['profile']}):[/bold]")
+    click.echo(f"Permanent Activation (add to {shell_info['profile']}):")
     click.echo(f"echo '{shell_info['eval']}' >> {shell_info['profile']}")
 
 
 def main():
-    print("DEBUG: CMC main() is executing", flush=True)
+    logger.debug("CMC main() is executing")
     # 1. Load core extensions bundled with the package
     load_core_extensions(cli)
 
