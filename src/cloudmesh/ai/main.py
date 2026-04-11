@@ -62,7 +62,7 @@ registry = CommandRegistry()
 
 @click.group(cls=SubcommandHelpGroup)
 def cli():
-    """CME: Custom Managed Extensions."""
+    """cmc: Cloudmesh Commands."""
     pass
 
 
