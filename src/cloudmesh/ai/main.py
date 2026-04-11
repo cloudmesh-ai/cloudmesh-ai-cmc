@@ -66,6 +66,16 @@ def cli():
     pass
 
 
+@cli.command(name="version")
+def version():
+    """Display the current version of cmc."""
+    from importlib.metadata import version as get_version
+    try:
+        click.echo(get_version("cloudmesh-ai-cmc"))
+    except Exception:
+        click.echo("Unknown version")
+
+
 def load_core_extensions(cli):
     """
     Iteratively finds all modules in the cloudmesh.ai.extension package

@@ -3,10 +3,10 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "cloudmesh-ai-core"
+name = "cloudmesh-ai-cmc"
 dynamic = ["version"]
 description = "CMC: Cloudmesh Command for AI"
-license = {text = "Apache-2.0"}
+license = "Apache-2.0"
 keywords = ["cmc", "extension", "cli", "click", "cloudmesh"]
 dependencies = [
     "click",
@@ -32,4 +32,4 @@ package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["extension*"]
+include = ["cloudmesh*"]
