@@ -1,12 +1,12 @@
 ######################################################################
-# Cloudmesh CMA Makefile
+# Cloudmesh CMMC Makefile
 ######################################################################
 
 # Variables
 PYTHON       := python
 PIP          := pip
-PACKAGE_NAME := cloudmesh-ai-shell
-COMMAND_NAME := cma
+PACKAGE_NAME := $(shell basename $(CURDIR))
+COMMAND_NAME := cmc
 TWINE        := $(PYTHON) -m twine
 VERSION_FILE := VERSION
 GIT          := git
@@ -15,7 +15,9 @@ GIT          := git
         check version patch tag release test test-cov setup-test uninstall-all
 
 help:
-	@echo "Cloudmesh CMA Management Commands:"
+	@echo
+	@echo "Makefile for the CMC CloudmeshCommands:"
+	@echo
 	@echo "  version       - Display current version from $(VERSION_FILE)"
 	@echo "  patch V=x.y.z - Update version in $(VERSION_FILE) (e.g., V=4.0.1.dev1)"
 	@echo "  install       - Install in editable mode for local development"
@@ -31,7 +33,8 @@ help:
 	@echo "  upload        - Build, check, and upload to Production PyPI"
 	@echo "  tag           - Create a git tag based on current version and push"
 	@echo "  release       - Full Production Cycle: upload + tag"
-
+	@echo
+	
 # --- VERSION MANAGEMENT ---
 
 version:
@@ -63,7 +66,7 @@ test:
 	pytest -v tests/
 
 test-cov:
-	pytest --cov=cloudmesh.ai.shell --cov-report=term-missing tests/
+	pytest --cov=cloudmesh.ai.cmc --cov-report=term-missing tests/
 
 setup-test:
 	$(PIP) install pytest pytest-mock pytest-cov

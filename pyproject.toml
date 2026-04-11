@@ -13,7 +13,8 @@ dependencies = [
     "rich",
     "shellingham",
     "pytest",
-    "pip-tools"
+    "pip-tools",
+    "twine"
 ]
 
 [project.scripts]
