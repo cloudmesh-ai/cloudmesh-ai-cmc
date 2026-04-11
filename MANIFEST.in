@@ -1,0 +1,2 @@
+include DOCS.md
+recursive-include src/cloudmesh/ai *.md
