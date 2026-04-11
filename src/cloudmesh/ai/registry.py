@@ -10,8 +10,14 @@ import json
 import os
 import importlib.util
 import sys
+import logging
 
-CONFIG_PATH = os.path.expanduser("~/.cme_registry.json")
+logger = logging.getLogger("cmc")
+
+# Default path for the registry configuration
+DEFAULT_CONFIG_PATH = os.path.expanduser("~/.config/cloudmesh-ai/cmc-registry.json")
+# Allow override via environment variable
+CONFIG_PATH = os.getenv("CMC_REGISTRY_PATH", DEFAULT_CONFIG_PATH)
 
 def get_version(path):
     """Reads the version from a VERSION file in the provided path."""
@@ -21,21 +27,75 @@ def get_version(path):
             return f.read().strip()
     return "unknown"
 
+import click
+
+class LazyCommand(click.Command):
+    """Proxy object that holds metadata for a command to be loaded lazily."""
+    def __init__(self, name, path=None, module_name=None, entry_point_name="entry_point"):
+        super().__init__(name=name, help=f"Lazy loaded command: {name}")
+        self.name = name
+        self.path = path
+        self.module_name = module_name
+        self.entry_point_name = entry_point_name
+
+    def __repr__(self):
+        return f"LazyCommand(name={self.name})"
+
 class CommandRegistry:
-    def __init__(self):
-        if not os.path.exists(CONFIG_PATH):
+    def __init__(self, config_path=None):
+        self._loading_stack = set()
+        self.config_path = config_path or CONFIG_PATH
+        
+        # Ensure the directory exists
+        config_dir = os.path.dirname(self.config_path)
+        if config_dir and not os.path.exists(config_dir):
+            os.makedirs(config_dir, exist_ok=True)
+            
+        if not os.path.exists(self.config_path):
             self.save({})
         
     def load_config(self):
         try:
-            with open(CONFIG_PATH, "r") as f:
-                return json.load(f)
+            with open(self.config_path, "r") as f:
+                data = json.load(f)
+                if self._validate_config_structure(data):
+                    return data
+                return {}
         except (FileNotFoundError, json.JSONDecodeError):
             return {}
 
+    def _validate_config_structure(self, data):
+        """
+        Validates that the registry JSON has the expected structure:
+        { "ext_name": { "path": "...", "active": bool }, ... }
+        """
+        if not isinstance(data, dict):
+            logger.error(f"Registry config at {self.config_path} is not a JSON object.")
+            return False
+
+        valid_data = {}
+        for name, info in data.items():
+            if isinstance(info, dict) and "path" in info and "active" in info:
+                valid_data[name] = info
+            else:
+                logger.warning(f"Skipping invalid registry entry for '{name}': expected dict with 'path' and 'active'.")
+        
+        # If we filtered out everything or the data was fundamentally wrong, 
+        # we return the valid subset. If the subset is empty but the original wasn't,
+        # it's effectively an invalid config.
+        return valid_data if valid_data == data else valid_data
+
     def save(self, data):
-        with open(CONFIG_PATH, "w") as f:
-            json.dump(data, f, indent=4)
+        """Saves the registry configuration atomically using a temporary file."""
+        temp_path = f"{self.config_path}.tmp"
+        try:
+            with open(temp_path, "w") as f:
+                json.dump(data, f, indent=4)
+            os.replace(temp_path, self.config_path)
+        except Exception as e:
+            logger.error(f"Failed to save registry atomically: {e}")
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
 
     def register(self, name, path):
         config = self.load_config()
@@ -73,26 +133,79 @@ class CommandRegistry:
             })
         return details
 
+    def _load_extension(self, name, path):
+        """
+        Helper to dynamically load an extension module from a path.
+        Returns the module if successful and valid, otherwise None.
+        Includes circular dependency detection.
+        """
+        if name in self._loading_stack:
+            logger.error(f"Circular dependency detected while loading extension '{name}'")
+            return None
+
+        self._loading_stack.add(name)
+        try:
+            module_name = f"cloudmesh.ai.ext_{name}"
+            cmd_file = os.path.join(path, "cmd.py")
+            
+            if not os.path.exists(cmd_file):
+                return None
+            
+            spec = importlib.util.spec_from_file_location(module_name, cmd_file)
+            if spec is None:
+                return None
+                
+            module = importlib.util.module_from_spec(spec)
+            sys.modules[module_name] = module
+            spec.loader.exec_module(module)
+            
+            if self._validate_extension(name, module):
+                return module
+        except Exception as e:
+            logger.error(f"Error loading extension '{name}': {e}")
+        finally:
+            self._loading_stack.remove(name)
+        return None
+
+    def _validate_extension(self, name, module):
+        """
+        Validates that the loaded module has a valid entry_point.
+        """
+        if not hasattr(module, 'entry_point'):
+            logger.error(f"Validation failed for '{name}': Missing 'entry_point' in cmd.py")
+            return False
+        
+        if not callable(module.entry_point):
+            logger.error(f"Validation failed for '{name}': 'entry_point' must be a callable (e.g., a Click command)")
+            return False
+            
+        return True
+
     def get_active_commands(self):
+        """Returns the actual command objects (eager loading)."""
         config = self.load_config()
         commands = {}
         for name, info in config.items():
             if not info.get("active", False):
                 continue
-            try:
-                module_name = f"cloudmesh.ai.ext_{name}"
-                cmd_file = os.path.join(info["path"], "cmd.py")
-                if not os.path.exists(cmd_file):
-                    continue
-                
-                spec = importlib.util.spec_from_file_location(module_name, cmd_file)
-                module = importlib.util.module_from_spec(spec)
-                sys.modules[module_name] = module
-                spec.loader.exec_module(module)
+            module = self._load_extension(name, info["path"])
+            if module:
                 commands[name] = module.entry_point
-            except Exception as e:
-                print(f"Error loading {name}: {e}")
         return commands
+
+    def get_lazy_commands(self):
+        """Returns LazyCommand proxies instead of importing modules."""
+        config = self.load_config()
+        lazy_cmds = {}
+        for name, info in config.items():
+            if not info.get("active", True):
+                continue
+            lazy_cmds[name] = LazyCommand(
+                name=name, 
+                path=info["path"], 
+                module_name=f"cloudmesh.ai.ext_{name}"
+            )
+        return lazy_cmds
     
     def inject_commands(self, cli):
         """
@@ -101,34 +214,9 @@ class CommandRegistry:
         each path, and attaches the 'entry_point' to the main CLI group.
         """
         config = self.load_config()
-        
         for name, info in config.items():
-            # Skip if deactivated
             if not info.get("active", True):
                 continue
-                
-            try:
-                # Create a unique internal module name to avoid collisions
-                module_name = f"cloudmesh.ai.ext_{name}"
-                
-                # Extensions MUST have a cmd.py file in their directory
-                cmd_file = os.path.join(info["path"], "cmd.py")
-                
-                if not os.path.exists(cmd_file):
-                    # Silently skip if the file was deleted but is still in registry
-                    continue
-                
-                # Dynamic Python Import Logic
-                spec = importlib.util.spec_from_file_location(module_name, cmd_file)
-                module = importlib.util.module_from_spec(spec)
-                sys.modules[module_name] = module
-                spec.loader.exec_module(module)
-                
-                # Attach to Click
-                # We look for a function/object named 'entry_point' in the loaded file
-                if hasattr(module, 'entry_point'):
-                    cli.add_command(module.entry_point, name=name)
-                    
-            except Exception as e:
-                # Log error but don't crash the entire CLI for one bad plugin
-                print(f"Error loading extension '{name}': {e}")
+            module = self._load_extension(name, info["path"])
+            if module:
+                cli.add_command(module.entry_point, name=name)

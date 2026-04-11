@@ -38,21 +38,11 @@ help:
 # --- VERSION MANAGEMENT ---
 
 version:
-	@VERSION=$$(cat $(VERSION_FILE)); \
-	BASE=$$(echo $$VERSION | cut -d'.' -f1-3); \
-	DEV=$$(echo $$VERSION | grep -o "dev[0-9]*$$" | sed 's/dev//' || echo "0"); \
-	NEXT_PATCH=$$(echo $$BASE | awk -F. '{print $$1"."$$2"."$$3+1}'); \
-	NEXT_DEV=$$(echo $$BASE | awk -F. -v d=$$DEV '{print $$1"."$$2"."$$3".dev"d+1}'); \
-	echo "Current:   $$VERSION"; \
-	echo "Suggested Next Steps:"; \
-	echo "  Release:   make patch V=$$BASE"; \
-	echo "  Patch:     make patch V=$$NEXT_PATCH"; \
-	echo "  Dev:     make patch V=$$NEXT_DEV"
+	$(PYTHON) bin/version_mgmt.py version
 
 patch:
 	@if [ -z "$(V)" ]; then echo "Usage: make patch V=4.0.1.dev1"; exit 1; fi
-	@echo "$(V)" > $(VERSION_FILE)
-	@echo "Version updated to $(V) in $(VERSION_FILE)"
+	$(PYTHON) bin/version_mgmt.py patch $(V)
 
 # --- DEVELOPMENT & TESTING ---
 
@@ -93,7 +83,7 @@ test-install:
 	@echo "Removing local version to ensure fresh test..."
 	-$(PIP) uninstall -y $(PACKAGE_NAME)
 	@echo "Installing latest version from TestPyPI..."
-	$(PIP) install --no-cache-dir --upgrade \
+	cd /tmp && $(PIP) install --no-cache-dir --upgrade --force-reinstall --ignore-installed \
 				  --index-url https://test.pypi.org/simple/ \
 				  --extra-index-url https://pypi.org/simple/ \
 				  --pre $(PACKAGE_NAME)
