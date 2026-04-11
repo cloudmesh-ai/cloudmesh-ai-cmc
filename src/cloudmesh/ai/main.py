@@ -26,13 +26,16 @@ from cloudmesh.ai.registry import CommandRegistry
 from importlib.metadata import entry_points
 
 # Setup Rich Logging
+log_level = os.getenv("CMC_LOG_LEVEL", "WARNING").upper()
+numeric_level = getattr(logging, log_level, logging.WARNING)
 logging.basicConfig(
-    level="WARNING",
+    level=numeric_level,
     format="%(message)s",
     datefmt="[%X]",
     handlers=[RichHandler(rich_tracebacks=True)],
 )
 logger = logging.getLogger("cmc")
+logger.setLevel(numeric_level)
 
 
 from cloudmesh.ai.registry import CommandRegistry, LazyCommand

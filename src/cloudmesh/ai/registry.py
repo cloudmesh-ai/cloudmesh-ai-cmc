@@ -67,7 +67,7 @@ class CommandRegistry:
         Validates that the registry JSON has the expected structure:
         { "ext_name": { "path": "...", "active": bool }, ... }
         """
-        print(f"DEBUG: _validate_config_structure called with data: {data}")
+        logger.debug(f"_validate_config_structure called with data: {data}")
         if not isinstance(data, dict):
             logger.error(f"Registry config at {self.config_path} is not a JSON object.")
             return {}
@@ -79,7 +79,7 @@ class CommandRegistry:
             else:
                 logger.warning(f"Skipping invalid registry entry for '{name}': expected dict with 'path' and 'active'.")
         
-        print(f"DEBUG: _validate_config_structure returning valid_data: {valid_data}")
+        logger.debug(f"_validate_config_structure returning valid_data: {valid_data}")
         return valid_data
 
     def save(self, data):
@@ -148,6 +148,15 @@ class CommandRegistry:
             if not os.path.exists(cmd_file):
                 return None
             
+            # Add the 'src' directory to sys.path if it exists, to allow imports from the extension
+            src_path = os.path.join(path, "src")
+            if os.path.exists(src_path):
+                if src_path not in sys.path:
+                    sys.path.insert(0, src_path)
+            
+            # Debugging: log sys.path to verify the src_path is present
+            logger.debug(f"sys.path[0] is {sys.path[0]}")
+
             spec = importlib.util.spec_from_file_location(module_name, cmd_file)
             if spec is None:
                 return None
@@ -168,19 +177,19 @@ class CommandRegistry:
         """
         Validates that the loaded module has a valid entry_point.
         """
-        print(f"DEBUG: _validate_extension called for {name}")
+        logger.debug(f"_validate_extension called for {name}")
         if not hasattr(module, 'entry_point'):
-            print(f"DEBUG: Validation failed for {name}: Missing entry_point")
+            logger.debug(f"Validation failed for {name}: Missing entry_point")
             logger.error(f"Validation failed for '{name}': Missing 'entry_point' in cmd.py")
             return False
         
-        print(f"DEBUG: entry_point for {name} is {module.entry_point} (type: {type(module.entry_point)})")
+        logger.debug(f"entry_point for {name} is {module.entry_point} (type: {type(module.entry_point)})")
         if not callable(module.entry_point):
-            print(f"DEBUG: Validation failed for {name}: entry_point is not callable")
+            logger.debug(f"Validation failed for {name}: entry_point is not callable")
             logger.error(f"Validation failed for '{name}': 'entry_point' must be a callable (e.g., a Click command)")
             return False
             
-        print(f"DEBUG: Validation succeeded for {name}")
+        logger.debug(f"Validation succeeded for {name}")
         return True
 
     def get_active_commands(self):

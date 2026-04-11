@@ -60,3 +60,27 @@ cmc command create <extension_name>
 ```bash
 cmc docs
 cmc man <command_name>
+```
+
+## Logging and Debugging
+
+`cloudmesh-ai-cmc` uses a configurable logging system to help with troubleshooting and development. You can control the granularity of the output using the `CMC_LOG_LEVEL` environment variable.
+
+### Log Levels
+The following levels are supported (in order of increasing verbosity):
+- `ERROR`: Only critical errors are shown.
+- `WARNING`: Errors and potential issues are shown.
+- `INFO`: General operational messages (Default).
+- `DEBUG`: Detailed diagnostic information, including extension loading and validation steps.
+
+### Usage
+To enable debug logging, set the environment variable before running the command:
+
+```bash
+# Enable debug logging for a single command
+CMC_LOG_LEVEL=DEBUG cmc speedtest run ...
+
+# Set it for the current session
+export CMC_LOG_LEVEL=DEBUG
+cmc speedtest run ...
+```
