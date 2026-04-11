@@ -12,6 +12,8 @@ dependencies = [
     "click",
     "rich",
     "shellingham",
+    "pytest",
+    "pip-tools"
 ]
 
 [project.scripts]

@@ -4,15 +4,44 @@
 #
 #    pip-compile --output-file=requirements.txt pyproject.toml
 #
+build==1.4.3
+    # via pip-tools
 click==8.3.2
-    # via cloudmesh-ai-core (pyproject.toml)
+    # via
+    #   cloudmesh-ai-core (pyproject.toml)
+    #   pip-tools
+iniconfig==2.3.0
+    # via pytest
 markdown-it-py==4.0.0
     # via rich
 mdurl==0.1.2
     # via markdown-it-py
+packaging==26.0
+    # via
+    #   build
+    #   pytest
+    #   wheel
+pip-tools==7.5.3
+    # via cloudmesh-ai-core (pyproject.toml)
+pluggy==1.6.0
+    # via pytest
 pygments==2.20.0
-    # via rich
+    # via
+    #   pytest
+    #   rich
+pyproject-hooks==1.2.0
+    # via
+    #   build
+    #   pip-tools
+pytest==9.0.3
+    # via cloudmesh-ai-core (pyproject.toml)
 rich==14.3.3
     # via cloudmesh-ai-core (pyproject.toml)
 shellingham==1.5.4
     # via cloudmesh-ai-core (pyproject.toml)
+wheel==0.46.3
+    # via pip-tools
+
+# The following packages are considered to be unsafe in a requirements file:
+# pip
+# setuptools
