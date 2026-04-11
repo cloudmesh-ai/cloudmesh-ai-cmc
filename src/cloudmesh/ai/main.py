@@ -119,111 +119,8 @@ def cli(ctx, debug):
         logger.debug("Debug logging enabled")
 
 
-@cli.group(name="registry")
-def registry_group():
-    """Manage the extension registry."""
-    pass
 
 
-@registry_group.command(name="list")
-def registry_list():
-    """List all available extensions (Core, Pip, and Registered)."""
-    all_extensions = []
-
-    # 1. Core Extensions
-    for loader, module_name, is_pkg in pkgutil.iter_modules(extensions.__path__):
-        # We can't easily get a 'path' for core modules without importing,
-        # but we can identify them as 'Core'.
-        all_extensions.append(
-            {
-                "name": module_name,
-                "source": "Core",
-                "active": True,
-                "version": "Built-in",
-                "path": "cloudmesh.ai.extension",
-            }
-        )
-
-    # 2. Pip Extensions
-    eps = entry_points().select(group="cloudmesh.ai.extension")
-    for ep in eps:
-        all_extensions.append(
-            {
-                "name": ep.name,
-                "source": "Pip",
-                "active": True,
-                "version": "Installed",
-                "path": ep.value,
-            }
-        )
-
-    # 3. Registry Extensions
-    reg_details = registry.list_all_details()
-    for item in reg_details:
-        item["source"] = "Registry"
-        all_extensions.append(item)
-
-    if not all_extensions:
-        console = Console()
-        console.print("[yellow]No extensions found.[/yellow]")
-        return
-
-    table = Table(title="All Available Extensions")
-    table.add_column("Name", style="cyan")
-    table.add_column("Source", style="blue")
-    table.add_column("Status", style="magenta")
-    table.add_column("Version", style="green")
-    table.add_column("Path", style="dim")
-
-    for item in all_extensions:
-        status = "[green]Active[/green]" if item["active"] else "[red]Inactive[/red]"
-        table.add_row(
-            item["name"], item["source"], status, item["version"], item["path"]
-        )
-
-    Console().print(table)
-
-
-@registry_group.command(name="add")
-@click.argument("path", type=click.Path(exists=True, file_okay=False, dir_okay=True))
-def registry_add(path):
-    """Register a new extension from the specified path."""
-    abs_path = os.path.abspath(path)
-    name = os.path.basename(abs_path)
-    registry.register(name, abs_path)
-    click.echo(f"Registered extension '{name}' from {abs_path}")
-
-
-@registry_group.command(name="enable")
-@click.argument("name")
-def registry_enable(name):
-    """Enable a registered extension."""
-    if registry.set_status(name, True):
-        click.echo(f"Extension '{name}' enabled.")
-    else:
-        click.echo(f"Error: Extension '{name}' not found in registry.", err=True)
-
-
-@registry_group.command(name="disable")
-@click.argument("name")
-def registry_disable(name):
-    """Disable a registered extension."""
-    if registry.set_status(name, False):
-        click.echo(f"Extension '{name}' disabled.")
-    else:
-        click.echo(f"Error: Extension '{name}' not found in registry.", err=True)
-
-
-@registry_group.command(name="remove")
-@click.argument("name")
-def registry_remove(name):
-    """Remove an extension from the registry."""
-    config = registry.load_config()
-    if name in config:
-        registry.unregister(name)
-        click.echo(f"Extension '{name}' removed from registry.")
-    else:
-        click.echo(f"Error: Extension '{name}' not found in registry.", err=True)
 
 
 @cli.command(name="version")
@@ -265,7 +162,7 @@ def load_core_extensions(cli):
 
     # We use a list of known core extensions to be absolutely sure they are loaded
     # if dynamic discovery fails.
-    core_modules = ["banner", "tree", "man", "command"]
+    core_modules = ["banner", "tree", "man", "command", "docs"]
 
     for module_name in core_modules:
         try:
@@ -348,47 +245,6 @@ def load_pip_extensions(cli):
         )
 
 
-@cli.command(name="docs")
-def docs():
-    """Display documentation for cmc and extension development."""
-    # Load the guide from the DOCS.md file in the package first
-    try:
-        # Use importlib.resources for namespace package compatibility
-        resource_path = importlib.resources.files("cloudmesh.ai").joinpath("DOCS.md")
-        guide = resource_path.read_text(encoding="utf-8")
-    except Exception as e:
-        logger.error(f"Could not load documentation file: {e}")
-        click.echo("Error: Documentation file could not be loaded.", err=True)
-        return
-
-    # 1. Define a rich Theme to force the light grey background for code blocks.
-    # This handles the background for both plain and syntax-highlighted blocks
-    # by styling the rich renderable containers.
-    # We target 'code' and 'block' as well as 'markdown.*' to override Pygments defaults
-    custom_theme = Theme(
-        {
-            "code": "black on #f0f0f0",
-            "block": "black on #f0f0f0",
-            "markdown.code": "black on #f0f0f0",
-            "markdown.block": "black on #f0f0f0",
-            "markdown.text": "black on #f0f0f0",
-            "markdown.python": "black on #f0f0f0",
-        }
-    )
-    console = Console(theme=custom_theme)
-
-    # Render the guide as Markdown using a standard Pygments theme.
-    # The rich Theme defined above will handle the background color.
-    markdown_content = Markdown(guide, code_theme="default")
-
-    console.print(
-        Panel(
-            markdown_content,
-            title="[bold blue]cmc Documentation[/bold blue]",
-            border_style="blue",
-            expand=False,
-        )
-    )
 
 
 @cli.command(name="completion")
