@@ -21,7 +21,7 @@ console = Console()
 @click.argument("text", nargs=-1, required=True)
 def cmd_banner(char, width, indent, color, text):
     """
-    BANNER: A simple command to print a text banner with customizable character,
+    A simple command to print a text banner with customizable character,
     width, and color.
     """
     message = " ".join(text)
