@@ -5,19 +5,19 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "cloudmesh-ai-{name}"
 dynamic = ["version"]
-description = "Extension {name} created by CME"
+description = "Command {name} created by CMC"
 license = {{text = "Apache-2.0"}}
 dependencies = [
     "click",
     "rich",
 ]
 
-[project.entry-points."cloudmesh.ai.extension"]
-{name} = "extension.{name}:register"
+[project.entry-points."cloudmesh.ai.command"]
+{name} = "command.{name}:register"
 
 [tool.setuptools.dynamic]
 version = {{file = ["VERSION"]}}
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["extension*"]
+include = ["command*"]

@@ -18,7 +18,7 @@ dependencies = [
 ]
 
 [project.scripts]
-cmc = "cloudmesh.ai.main:main"
+cmc = "cloudmesh.ai.cmc.main:main"
 
 [tool.setuptools.dynamic]
 version = {file = ["VERSION"]}

@@ -14,7 +14,7 @@ def docs():
     # Load the guide from the DOCS.md file in the package first
     try:
         # Use importlib.resources for namespace package compatibility
-        resource_path = importlib.resources.files("cloudmesh.ai").joinpath("DOCS.md")
+        resource_path = importlib.resources.files("cloudmesh.ai.cmc").joinpath("DOCS.md")
         guide = resource_path.read_text(encoding="utf-8")
     except Exception as e:
         logger.error(f"Could not load documentation file: {e}")

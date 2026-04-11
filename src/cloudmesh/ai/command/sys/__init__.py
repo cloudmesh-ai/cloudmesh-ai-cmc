@@ -1,6 +1,6 @@
 import click
-import cloudmesh.ai.extension.sys as sys_ext
-from cloudmesh.ai.utils import register_group_extensions
+import cloudmesh.ai.command.sys as sys_ext
+from cloudmesh.ai.cmc.utils import register_group_extensions
 
 @click.group(name="sys")
 def sys_group():

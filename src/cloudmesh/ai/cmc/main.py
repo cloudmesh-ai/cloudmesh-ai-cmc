@@ -21,8 +21,8 @@ from rich.markdown import Markdown
 from rich.theme import Theme
 from rich.console import Group
 from rich.text import Text
-import cloudmesh.ai.extension as extensions  # Import the extension package
-from cloudmesh.ai.registry import CommandRegistry
+import cloudmesh.ai.command as extensions  # Import the extension package
+from cloudmesh.ai.cmc.registry import CommandRegistry
 from importlib.metadata import entry_points
 
 # Setup Rich Logging
@@ -38,7 +38,7 @@ logger = logging.getLogger("cmc")
 logger.setLevel(numeric_level)
 
 
-from cloudmesh.ai.registry import CommandRegistry, LazyCommand
+from cloudmesh.ai.cmc.registry import CommandRegistry, LazyCommand
 
 
 class SubcommandHelpGroup(click.Group):
@@ -158,7 +158,7 @@ def version():
 
 def load_core_extensions(cli):
     """
-    Iteratively finds all modules in the cloudmesh.ai.extension package
+    Iteratively finds all modules in the cloudmesh.ai.command package
     and registers them eagerly to ensure they always appear in help.
     """
     found_any = False
@@ -169,7 +169,7 @@ def load_core_extensions(cli):
 
     for module_name in core_modules:
         try:
-            full_module_name = f"cloudmesh.ai.extension.{module_name}"
+            full_module_name = f"cloudmesh.ai.command.{module_name}"
             module = importlib.import_module(full_module_name)
 
             # 1. Try the new 'entry_point' pattern
@@ -201,7 +201,7 @@ def load_core_extensions(cli):
             if is_pkg or module_name in core_modules:
                 continue
             try:
-                full_module_name = f"cloudmesh.ai.extension.{module_name}"
+                full_module_name = f"cloudmesh.ai.command.{module_name}"
                 module = importlib.import_module(full_module_name)
 
                 if hasattr(module, "entry_point"):
@@ -233,8 +233,13 @@ def load_pip_extensions(cli):
     """
     Loads extensions installed via pip using entry points lazily.
     """
-    eps = entry_points().select(group="cloudmesh.ai.extension")
+    eps = entry_points().select(group="cloudmesh.ai.command")
     for entry_point in eps:
+        # Avoid overwriting extensions already loaded from the registry
+        if entry_point.name in cli.commands:
+            logger.debug(f"Skipping pip extension {entry_point.name} as it is already registered")
+            continue
+
         # We use the entry point's value as the module name
         # entry_point.value is usually 'module.function'
         module_path, func_name = entry_point.value.rsplit(":", 1)

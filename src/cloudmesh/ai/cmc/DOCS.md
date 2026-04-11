@@ -92,6 +92,37 @@ The `command` group allows you to manage local extensions without needing to pac
 
 ---
 
+## Logging and Debugging
+
+`cmc` uses a configurable logging system to help with troubleshooting and development. You can control the granularity of the output using the `CMC_LOG_LEVEL` environment variable or the `--debug` flag.
+
+### Log Levels
+The following levels are supported (in order of increasing verbosity):
+- `ERROR`: Only critical errors are shown.
+- `WARNING`: Errors and potential issues are shown (Default).
+- `INFO`: General operational messages.
+- `DEBUG`: Detailed diagnostic information, including extension loading and validation steps.
+
+### Usage
+To enable debug logging, you can use either of the following methods:
+
+**1. Using the environment variable:**
+```bash
+# Enable debug logging for a single command
+CMC_LOG_LEVEL=DEBUG cmc speedtest run ...
+
+# Set it for the current session
+export CMC_LOG_LEVEL=DEBUG
+cmc speedtest run ...
+```
+
+**2. Using the CLI flag:**
+```bash
+cmc --debug speedtest run ...
+```
+
+---
+
 ## Extensions
 
 ### Extension Management

@@ -142,7 +142,7 @@ class CommandRegistry:
 
         self._loading_stack.add(name)
         try:
-            module_name = f"cloudmesh.ai.ext_{name}"
+            module_name = f"cloudmesh.ai.cmc.ext_{name}"
             cmd_file = os.path.join(path, "cmd.py")
             
             if not os.path.exists(cmd_file):
@@ -214,7 +214,7 @@ class CommandRegistry:
             lazy_cmds[name] = LazyCommand(
                 name=name, 
                 path=info["path"], 
-                module_name=f"cloudmesh.ai.ext_{name}"
+                module_name=f"cloudmesh.ai.cmc.ext_{name}"
             )
         return lazy_cmds
     

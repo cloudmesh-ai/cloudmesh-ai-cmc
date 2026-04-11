@@ -4,7 +4,7 @@ import inspect
 from rich.console import Console
 from rich.table import Table
 from rich import box
-from cloudmesh.ai.extension.man import generate_manual, get_formatter
+from cloudmesh.ai.command.man import generate_manual, get_formatter
 import os
 from pathlib import Path
 import re
@@ -24,7 +24,7 @@ console = Console()
 )
 def cmd_load(directory, name):
     """Register and load a new command."""
-    from cloudmesh.ai.main import registry
+    from cloudmesh.ai.cmc.main import registry
 
     registry.register(name, directory)
     # Derive the name if not provided for the output message
@@ -36,7 +36,7 @@ def cmd_load(directory, name):
 @click.argument("name")
 def cmd_activate(name):
     """Activate a registered command."""
-    from cloudmesh.ai.main import registry
+    from cloudmesh.ai.cmc.main import registry
 
     if registry.set_status(name, True):
         click.echo(f"Activated: {name}")
@@ -48,7 +48,7 @@ def cmd_activate(name):
 @click.argument("name")
 def cmd_deactivate(name):
     """Deactivate a registered command."""
-    from cloudmesh.ai.main import registry
+    from cloudmesh.ai.cmc.main import registry
 
     if registry.set_status(name, False):
         click.echo(f"Deactivated: {name}")
@@ -59,7 +59,7 @@ def cmd_deactivate(name):
 @click.command(name="list")
 def cmd_list():
     """List all registered commands using a professional Rich table."""
-    from cloudmesh.ai.main import registry
+    from cloudmesh.ai.cmc.main import registry
 
     details = registry.list_all_details()
 
@@ -90,7 +90,7 @@ def cmd_list():
 @click.argument("name")
 def cmd_unload(name):
     """Remove a command from the registry."""
-    from cloudmesh.ai.main import registry
+    from cloudmesh.ai.cmc.main import registry
 
     registry.unregister(name)
     click.echo(f"Unloaded: {name}")
@@ -101,10 +101,10 @@ def cmd_unload(name):
 @click.option(
     "--groups", "-g", multiple=True, help="Additional sub-commands to create."
 )
-@click.option("--path", "-p", default=".", help="Path to create the extension in.")
+@click.option("--path", "-p", default=".", help="Path to create the command in.")
 def cmd_create(name, groups, path):
     """
-    Create or expand a cme extension.
+    Create or expand a CMC command.
     """
     root_name = name
     all_subs = list(groups)
@@ -113,46 +113,48 @@ def cmd_create(name, groups, path):
         all_subs = [root_name]
 
     current_dir = Path(__file__).parent
-    templates_dir = current_dir.parent / "templates"
+    templates_dir = current_dir.parent / "cmc" / "templates"
     base_dir = Path(path).expanduser().resolve()
     target_dir = base_dir / f"cloudmesh-ai-{root_name}"
-    plugin_file = target_dir / "src" / "cloudmesh" / "ai" / "extension" / f"{root_name}.py"
+    plugin_file = target_dir / "src" / "cloudmesh" / "ai" / "command" / f"{root_name}.py"
 
     if target_dir.exists():
-        if not plugin_file.exists():
-            console.print(f"[red]Error: {target_dir} is not a valid CME extension.[/red]")
+        console.print(f"\n[bold red]WARNING: the command '{root_name}' in the directory '{target_dir.name}' already exists.[/bold red]\n")
+        if click.confirm("Do you want to erase it and create a new one?", default=False):
+            import shutil
+            shutil.rmtree(target_dir)
+        elif plugin_file.exists():
+            # Directory exists and is a valid command, proceed to expand
+            content = plugin_file.read_text()
+            existing_cmds = re.findall(rf'@{root_name}_group\.command\(name="([^"]+)"\)', content)
+
+            new_additions_code = []
+            added_names = []
+
+            for sub in all_subs:
+                if sub in existing_cmds:
+                    console.print(f"[yellow]Warning: '{sub}' already exists. Skipping.[/yellow]")
+                else:
+                    code = f'\n\n@{root_name}_group.command(name="{sub}")\ndef {sub}_cmd():\n    """{sub} command added via CMC."""\n    console.print("[bold green]Hello from {root_name} {sub}![/bold green]")\n'
+                    new_additions_code.append(code)
+                    added_names.append(sub)
+
+            if not added_names:
+                return
+
+            if "def register(cli):" in content:
+                parts = content.split("def register(cli):")
+                new_content = parts[0] + "".join(new_additions_code) + "def register(cli):" + parts[1]
+                plugin_file.write_text(new_content)
+                console.print(f"[green]Updated extension {root_name} with {added_names}[/green]")
             return
-
-        content = plugin_file.read_text()
-        existing_cmds = re.findall(rf'@{root_name}_group\.command\(name="([^"]+)"\)', content)
-
-        new_additions_code = []
-        added_names = []
-
-        for sub in all_subs:
-            if sub in existing_cmds:
-                console.print(f"[yellow]Warning: '{sub}' already exists. Skipping.[/yellow]")
-            else:
-                code = f'\n\n@{root_name}_group.command(name="{sub}")\ndef {sub}_cmd():\n    """{sub} command added via CME."""\n    console.print("[bold green]Hello from {root_name} {sub}![/bold green]")\n'
-                new_additions_code.append(code)
-                added_names.append(sub)
-
-        if not added_names:
-            return
-
-        if "def register(cli):" in content:
-            parts = content.split("def register(cli):")
-            new_content = parts[0] + "".join(new_additions_code) + "def register(cli):" + parts[1]
-            plugin_file.write_text(new_content)
-            console.print(f"[green]Updated extension {root_name} with {added_names}[/green]")
-        return
 
     try:
-        extension_dir = target_dir / "src" / "cloudmesh" / "ai" / "extension"
-        extension_dir.mkdir(parents=True, exist_ok=True)
+        command_dir = target_dir / "src" / "cloudmesh" / "ai" / "command"
+        command_dir.mkdir(parents=True, exist_ok=True)
 
         commands_code_list = [
-            f'\n\n@{root_name}_group.command(name="{sub}")\ndef {sub}_cmd():\n    """{sub} created by CME."""\n    console.print("[bold green]Hello from {root_name} {sub}![/bold green]")\n'
+            f'\n\n@{root_name}_group.command(name="{sub}")\ndef {sub}_cmd():\n    """{sub} created by CMC."""\n    console.print("[bold green]Hello from {root_name} {sub}![/bold green]")\n'
             for sub in all_subs
         ]
 
@@ -161,10 +163,32 @@ def cmd_create(name, groups, path):
             root_name=root_name, commands_code="".join(commands_code_list)
         )
 
+        console.print("\nCreating:")
+        # Use relative path for the directory display
+        try:
+            rel_target = target_dir.relative_to(Path.cwd())
+            console.print(f"./{rel_target}/")
+        except ValueError:
+            console.print(f"{target_dir}/")
+
         (target_dir / "VERSION").write_text("0.1.0")
+        console.print("    - VERSION")
+
         (target_dir / "pyproject.toml").write_text(pyproject_content)
+        console.print("    - pyproject.toml")
+
         plugin_file.write_text(plugin_content)
-        console.print(f"[green]Created new extension at {target_dir}[/green]")
+        console.print(f"    - {plugin_file.relative_to(target_dir)}")
+        
+        # Write additional templates
+        if (templates_dir / "Makefile").exists():
+            (target_dir / "Makefile").write_text((templates_dir / "Makefile").read_text().format(name=root_name))
+            console.print("    - Makefile")
+        if (templates_dir / "LICENSE.tmpl").exists():
+            (target_dir / "LICENSE").write_text((templates_dir / "LICENSE.tmpl").read_text())
+            console.print("    - LICENSE")
+            
+        console.print(f"\n[green]Created new command at {target_dir}[/green]")
 
     except Exception as e:
         console.print(f"[red]Failed to create extension: {e}[/red]")
@@ -224,7 +248,7 @@ def register(cli):
     """
     @cli.group(name="command")
     def command_group():
-        """Manage cme extensions."""
+        """Manage CMC commands."""
         pass
 
     module_members = globals()

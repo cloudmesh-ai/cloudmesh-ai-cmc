@@ -1,6 +1,6 @@
 import click
-import cloudmesh.ai.extension.markdown as markdown_ext
-from cloudmesh.ai.utils import register_group_extensions
+import cloudmesh.ai.command.markdown as markdown_ext
+from cloudmesh.ai.cmc.utils import register_group_extensions
 
 @click.group(name="markdown")
 def markdown_group():

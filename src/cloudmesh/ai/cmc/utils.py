@@ -24,7 +24,7 @@ def register_group_extensions(parent_group, group_package, child_target=None):
 
     # group_package.__path__ provides the directory of the extension
     for loader, module_name, is_pkg in pkgutil.iter_modules(group_package.__path__):
-        # Construct full module path (e.g., cloudmesh.ai.extension.sys.info)
+        # Construct full module path (e.g., cloudmesh.ai.command.sys.info)
         full_name = f"{group_package.__name__}.{module_name}"
         try:
             module = importlib.import_module(full_name)
