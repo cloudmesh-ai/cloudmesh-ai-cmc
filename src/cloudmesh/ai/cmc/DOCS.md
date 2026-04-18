@@ -107,6 +107,56 @@ Manage local extensions using the `plugins` group.
 
 ---
 
+## Interactive Shell
+
+The `cmc shell` provides an immersive environment for interacting with the CMC ecosystem without needing to restart the CLI for every command.
+
+### Key Features
+- **Tab Completion**: Intelligent autocomplete for all registered CMC commands, sub-commands, and internal shell utilities.
+- **Persistent History**: Command history is saved to `~/.config/cloudmesh/ai/cmc_history`, allowing you to recall previous commands across sessions.
+- **Dynamic Updates**: The command completer is refreshed on every loop, meaning newly added or enabled plugins are immediately available for autocomplete.
+
+### Internal Shell Commands
+In addition to standard `cmc` commands, the shell supports several built-in utilities:
+
+| Command | Description | Example |
+| :--- | :--- | :--- |
+| `help` | Displays the shell help menu. | `help` |
+| `set <K>=<V>` | Sets a temporary environment variable for the current session. | `set API_KEY=secret123` |
+| `h <num>` | Displays the last `<num>` commands from the history file. | `h 10` |
+| `exit` / `quit` / `q` | Exits the interactive shell. | `exit` |
+
+### Usage Example
+Here is a typical workflow using the interactive shell:
+
+```bash
+# 1. Enter the interactive shell
+cmc shell
+
+# 2. Inside the shell, run a CMC command (with tab completion)
+cmc> version
+
+# 3. Set a session variable for a plugin
+cmc> set MODEL_NAME=gpt-4o
+
+# 4. Run a command that uses that variable
+cmc> doctor
+
+# 5. View recent history
+cmc> h 5
+
+# 6. Exit the shell
+cmc> exit
+```
+
+### Technical Implementation (Developer Note)
+The shell is implemented using `prompt_toolkit` for the frontend and `click` for command execution. 
+- **Command Collection**: The shell recursively traverses the `click.Group` hierarchy of the main CLI to build a flat list of all available command paths.
+- **Context Management**: To avoid recursion depth errors and `TypeError` during command discovery, a shared `click.Context` and a `visited` set are used during the recursive traversal of the command tree.
+- **Execution**: Commands are executed via `cli.main(args=args, standalone_mode=False)`, which allows the shell to capture errors and usage warnings without terminating the process.
+
+---
+
 ## Configuration & Environment
 
 `cmc` uses a YAML configuration file located at `~/.config/cloudmesh/ai/cmc.yaml`.

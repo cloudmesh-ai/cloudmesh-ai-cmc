@@ -221,8 +221,15 @@ def load_core_extensions(cli):
     """
     found_any = False
 
-    def register_recursive(current_cli, path, package_prefix):
+    def register_recursive(current_cli, path, package_prefix, visited=None):
         nonlocal found_any
+        if visited is None:
+            visited = set()
+        
+        if package_prefix in visited:
+            return
+        visited.add(package_prefix)
+
         try:
             for _, module_name, is_pkg in pkgutil.iter_modules(path):
                 full_module_name = f"{package_prefix}.{module_name}"
@@ -232,7 +239,7 @@ def load_core_extensions(cli):
                     current_cli.add_command(group)
                     # Recursively find commands inside this package
                     pkg = importlib.import_module(full_module_name)
-                    register_recursive(group, pkg.__path__, full_module_name)
+                    register_recursive(group, pkg.__path__, full_module_name, visited)
                 else:
                     try:
                         module = importlib.import_module(full_module_name)
@@ -241,8 +248,10 @@ def load_core_extensions(cli):
                             if isinstance(attr, (click.Command, click.Group)):
                                 # Use the command's own name if it's explicitly set, otherwise use module_name
                                 cmd_name = getattr(attr, 'name', module_name) or module_name
-                                current_cli.add_command(attr, name=cmd_name)
-                                found_any = True
+                                # Prevent adding the group to itself
+                                if attr is not current_cli:
+                                    current_cli.add_command(attr, name=cmd_name)
+                                    found_any = True
                                 break
                     except Exception as e:
                         logger.error(f"Could not load {full_module_name}: {e}")
