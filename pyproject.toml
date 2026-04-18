@@ -15,6 +15,7 @@ dependencies = [
     "pytest",
     "pip-tools",
     "twine",
+    "prompt_toolkit",
     "cloudmesh-ai-common",
 ]
 

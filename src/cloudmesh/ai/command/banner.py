@@ -19,7 +19,7 @@ console = Console()
     help="Color name or hex (e.g., 'red', 'blue', '#ff00ff')",
 )
 @click.argument("text", nargs=-1, required=True)
-def cmd_banner(char, width, indent, color, text):
+def banner(char, width, indent, color, text):
     """
     A simple command to print a text banner with customizable character,
     width, and color.
@@ -44,4 +44,4 @@ def cmd_banner(char, width, indent, color, text):
     console.print(f"{ind}{line}", style=style)
 
 def register(cli):
-    cli.add_command(cmd_banner, name="banner")
+    cli.add_command(banner, name="banner")

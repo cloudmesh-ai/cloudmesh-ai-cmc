@@ -110,13 +110,12 @@ class Config:
             return default
 
     def validate(self, key_path: str, value: Any):
-        """Validates a configuration value against the schema."""
-        if key_path not in self.SCHEMA:
-            raise KeyError(f"Configuration key '{key_path}' is not recognized.")
-        
-        expected_type = self.SCHEMA[key_path]["type"]
-        if not isinstance(value, expected_type):
-            raise TypeError(f"Invalid type for '{key_path}'. Expected {expected_type.__name__}, got {type(value).__name__}.")
+        """Validates a configuration value against the schema if it exists."""
+        if key_path in self.SCHEMA:
+            expected_type = self.SCHEMA[key_path]["type"]
+            if not isinstance(value, expected_type):
+                raise TypeError(f"Invalid type for '{key_path}'. Expected {expected_type.__name__}, got {type(value).__name__}.")
+        # If not in SCHEMA, we allow it (dynamic plugin configuration)
 
     def set(self, key_path: str, value: Any):
         """Set a value in the config using a dot-separated path (e.g., 'telemetry.enabled')."""

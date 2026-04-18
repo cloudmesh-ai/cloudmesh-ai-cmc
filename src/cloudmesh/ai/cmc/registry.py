@@ -110,6 +110,17 @@ class CommandRegistry:
     def register(self, name, path, dependencies=None):
         config = self.load_config()
         key = name if name else os.path.basename(os.path.abspath(path))
+        
+        # If dependencies aren't provided, try to extract them from the module
+        if dependencies is None:
+            try:
+                # Temporary load to extract metadata
+                module = self._load_extension_metadata(key, path)
+                if module:
+                    dependencies = getattr(module, "dependencies", [])
+            except Exception:
+                dependencies = []
+        
         config[key] = {
             "path": os.path.abspath(path),
             "active": True,
@@ -144,6 +155,19 @@ class CommandRegistry:
             })
         return details
 
+    def _load_extension_metadata(self, name, path):
+        """Loads a module without resolving dependencies to extract metadata."""
+        module_name = f"cloudmesh.ai.cmc.meta_{name}"
+        cmd_file = os.path.join(path, "cmd.py")
+        if not os.path.exists(cmd_file):
+            return None
+        spec = importlib.util.spec_from_file_location(module_name, cmd_file)
+        if spec is None:
+            return None
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+
     def _load_extension(self, name, path):
         """
         Helper to dynamically load an extension module from a path.
@@ -153,7 +177,7 @@ class CommandRegistry:
         if name in self._loading_stack:
             logger.error(f"Circular dependency detected while loading extension '{name}'")
             return None
-
+        
         # 1. Resolve and load dependencies first
         config = self.load_config()
         info = config.get(name, {})
@@ -162,13 +186,19 @@ class CommandRegistry:
         for dep_name in dependencies:
             dep_info = config.get(dep_name)
             if not dep_info:
-                raise PluginDependencyError(f"Extension '{name}' depends on '{dep_name}', but it is not registered.")
+                raise PluginDependencyError(
+                    f"Dependency Missing: Extension '{name}' requires '{dep_name}', "
+                    f"but '{dep_name}' is not registered in the CMC registry."
+                )
             if not dep_info.get("active", True):
-                raise PluginDependencyError(f"Extension '{name}' depends on '{dep_name}', but it is inactive.")
+                raise PluginDependencyError(
+                    f"Dependency Inactive: Extension '{name}' requires '{dep_name}', "
+                    f"but '{dep_name}' is currently disabled. Please enable it first."
+                )
             
             # Recursively load the dependency
             if not self._load_extension(dep_name, dep_info["path"]):
-                raise PluginDependencyError(f"Failed to load dependency '{dep_name}' for extension '{name}'.")
+                raise PluginDependencyError(f"Load Failure: Failed to load dependency '{dep_name}' required by '{name}'.")
 
         self._loading_stack.add(name)
         try:

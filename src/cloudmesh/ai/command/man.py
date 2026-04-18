@@ -115,44 +115,37 @@ def generate_manual(ctx, target_group, format_name="text"):
     return "".join(output)
 
 # ==============================================================================
-# REGISTRATION
+# COMMAND DEFINITION
 # ==============================================================================
 
-def register(cli):
-    """
-    Registers the man command. 
-    Usage: 
-      cmc man
-      cmc man <command>
-      cmc man --format html
-    """
-    @cli.command(name="man")
-    @click.argument("command_name", required=False)
-    @click.option(
-        "--format", "-f", 
-        default="text", 
-        type=click.Choice(["text", "md", "html", "rst", "qmd", "groff"], case_sensitive=False),
-        help="The output format for the manual."
-    )
-    @click.pass_context
-    def man(ctx, command_name, format):
-        """Generate a manual for all available commands."""
-        
-        # 'cli' passed into register is our Group object. 
-        # 'ctx' is our Context object.
-        
-        if command_name:
-            # Look up a specific command within the group
-            cmd = cli.get_command(ctx, command_name)
-            if cmd:
-                formatter = get_formatter(format)
-                header = formatter.format_header(date.today().strftime("%Y-%m-%d"))
-                content = formatter.format_single(ctx, command_name, cmd)
-                footer = formatter.format_footer()
-                click.echo(f"{header}{content}{footer}")
-            else:
-                click.echo(f"Error: Command '{command_name}' not found.", err=True)
+@click.command(name="man")
+@click.argument("command_name", required=False)
+@click.option(
+    "--format", "-f", 
+    default="text", 
+    type=click.Choice(["text", "md", "html", "rst", "qmd", "groff"], case_sensitive=False),
+    help="The output format for the manual."
+)
+@click.pass_context
+def man(ctx, command_name, format):
+    """Generate a manual for all available commands."""
+    
+    # Ensure we have the root group to look up commands
+    root_ctx = ctx.find_root()
+    cli = root_ctx.command
+    
+    if command_name:
+        # Look up a specific command within the group
+        cmd = cli.get_command(ctx, command_name)
+        if cmd:
+            formatter = get_formatter(format)
+            header = formatter.format_header(date.today().strftime("%Y-%m-%d"))
+            content = formatter.format_single(ctx, command_name, cmd)
+            footer = formatter.format_footer()
+            click.echo(f"{header}{content}{footer}")
         else:
-            # Generate the full manual
-            content = generate_manual(ctx, cli, format_name=format)
-            click.echo(content)
+            click.echo(f"Error: Command '{command_name}' not found.", err=True)
+    else:
+        # Generate the full manual
+        content = generate_manual(ctx, cli, format_name=format)
+        click.echo(content)

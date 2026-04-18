@@ -216,74 +216,43 @@ else:
 
 def load_core_extensions(cli):
     """
-    Iteratively finds all modules in the cloudmesh.ai.command package
-    and registers them eagerly to ensure they always appear in help.
+    Recursively iterates through the command directory and adds all click commands found.
+    Handles sub-packages by creating groups for them.
     """
     found_any = False
 
-    # We use a list of known core extensions to be absolutely sure they are loaded
-    # if dynamic discovery fails.
-    core_modules = ["banner", "tree", "man", "command", "docs", "doctor", "plugins", "telemetry", "config", "version", "shell", "completion"]
-    for module_name in core_modules:
+    def register_recursive(current_cli, path, package_prefix):
+        nonlocal found_any
         try:
-            full_module_name = f"cloudmesh.ai.command.{module_name}"
-            module = importlib.import_module(full_module_name)
-
-            # 1. Try the new 'entry_point' pattern
-            if hasattr(module, "entry_point"):
-                cli.add_command(module.entry_point, name=module_name)
-                found_any = True
-            # 2. Try the old 'register(cli)' pattern
-            elif hasattr(module, "register"):
-                module.register(cli)
-                found_any = True
-            # 3. Fallback: Look for any click.Command in the module
-            else:
-                for attr_name in dir(module):
-                    attr = getattr(module, attr_name)
-                    if isinstance(attr, click.Command):
-                        cli.add_command(attr, name=module_name)
-                        found_any = True
-                        break
-                if not found_any:
-                    logger.warning(
-                        f"Core extension {module_name} has no compatible entry point"
-                    )
-        except Exception as e:
-            logger.debug(f"Could not eagerly load core extension {module_name}: {e}")
-
-    # Also try dynamic discovery for any new core extensions added to the package
-    try:
-        for loader, module_name, is_pkg in pkgutil.iter_modules(extensions.__path__):
-            if is_pkg or module_name in core_modules:
-                continue
-            try:
-                full_module_name = f"cloudmesh.ai.command.{module_name}"
-                module = importlib.import_module(full_module_name)
-
-                if hasattr(module, "entry_point"):
-                    cli.add_command(module.entry_point, name=module_name)
-                    found_any = True
-                elif hasattr(module, "register"):
-                    module.register(cli)
-                    found_any = True
+            for _, module_name, is_pkg in pkgutil.iter_modules(path):
+                full_module_name = f"{package_prefix}.{module_name}"
+                if is_pkg:
+                    # Create a group for the sub-package
+                    group = click.Group(name=module_name)
+                    current_cli.add_command(group)
+                    # Recursively find commands inside this package
+                    pkg = importlib.import_module(full_module_name)
+                    register_recursive(group, pkg.__path__, full_module_name)
                 else:
-                    for attr_name in dir(module):
-                        attr = getattr(module, attr_name)
-                        if isinstance(attr, click.Command):
-                            cli.add_command(attr, name=module_name)
-                            found_any = True
-                            break
-            except Exception:
-                continue
-    except Exception:
-        pass
+                    try:
+                        module = importlib.import_module(full_module_name)
+                        # Find any click Command or Group in the module and add it
+                        for attr in vars(module).values():
+                            if isinstance(attr, (click.Command, click.Group)):
+                                # Use the command's own name if it's explicitly set, otherwise use module_name
+                                cmd_name = getattr(attr, 'name', module_name) or module_name
+                                current_cli.add_command(attr, name=cmd_name)
+                                found_any = True
+                                break
+                    except Exception as e:
+                        logger.error(f"Could not load {full_module_name}: {e}")
+        except Exception as e:
+            logger.error(f"Failed to iterate {package_prefix}: {e}")
+
+    register_recursive(cli, extensions.__path__, "cloudmesh.ai.command")
 
     if not found_any:
-        logger.debug("No core extensions were successfully loaded")
-        logger.warning("No core extensions were successfully loaded")
-    else:
-        logger.debug("Successfully loaded core extensions")
+        logger.warning("No core extensions found in cloudmesh.ai.command")
 
 
 def load_pip_extensions(cli):
@@ -312,6 +281,36 @@ def load_pip_extensions(cli):
 # Eagerly load core extensions at module level so they are visible to sphinx-click
 load_core_extensions(cli)
 
+# --- Command Aliases ---
+@cli.command(name="v", hidden=True)
+@click.pass_context
+def alias_version(ctx):
+    """Alias for version."""
+    ctx.invoke(cli.get_command("version"))
+
+@cli.command(name="tel", hidden=True)
+@click.pass_context
+def alias_telemetry(ctx):
+    """Alias for telemetry."""
+    ctx.invoke(cli.get_command("telemetry"))
+
+@cli.command(name="pl", hidden=True)
+@click.pass_context
+def alias_plugins_list(ctx):
+    """Alias for plugins list."""
+    plugins_group = cli.get_command("plugins")
+    if plugins_group:
+        ctx.invoke(plugins_group.get_command("list"))
+
+@cli.command(name="pch", hidden=True)
+@click.pass_context
+def alias_plugins_check(ctx):
+    """Alias for plugins check."""
+    plugins_group = cli.get_command("plugins")
+    if plugins_group:
+        ctx.invoke(plugins_group.get_command("check"))
+
+
 
 
 
@@ -321,6 +320,7 @@ def main():
     # Use telemetry to track the entire execution of the cmc tool
     with telemetry.track(message="Executing CMC command"):
         logger.debug("CMC main() is executing")
+
         # 1. Core extensions are now loaded at module level
 
         # 2. Inject active plugin commands from the JSON registry lazily
