@@ -6,13 +6,19 @@
 #
 #     http://www.apache.org/licenses/LICENSE-2.0
 import click
+import logging
 import os
+import sys
+import subprocess
+import pathlib
 import shellingham
 import pkgutil
 import importlib
 import importlib.resources
 import shutil
-import logging
+from cloudmesh.ai.common import logging as ai_log
+from cloudmesh.ai.common.telemetry import Telemetry, JSONFileBackend, TextBackend
+from cloudmesh.ai.cmc.utils import Config, handle_errors, console
 from rich.logging import RichHandler
 from rich.console import Console
 from rich.table import Table
@@ -21,40 +27,96 @@ from rich.markdown import Markdown
 from rich.theme import Theme
 from rich.console import Group
 from rich.text import Text
+from rich import box
 import cloudmesh.ai.command as extensions  # Import the extension package
 from cloudmesh.ai.cmc.registry import CommandRegistry
 from importlib.metadata import entry_points
 
-# Setup Rich Logging
-log_level = os.getenv("CMC_LOG_LEVEL", "WARNING").upper()
-numeric_level = getattr(logging, log_level, logging.WARNING)
-logging.basicConfig(
-    level=numeric_level,
-    format="%(message)s",
-    datefmt="[%X]",
-    handlers=[RichHandler(rich_tracebacks=True)],
-)
-logger = logging.getLogger("cmc")
-logger.setLevel(numeric_level)
+from cloudmesh.ai.cmc.context import config, logger, telemetry, registry
 
 
 from cloudmesh.ai.cmc.registry import CommandRegistry, LazyCommand
 
+
+class DelegatingCommand(click.Group):
+    """A command that delegates execution to another click object (e.g., a Group from a different click version)."""
+    def __init__(self, name, delegate, **kwargs):
+        # For a Group, ignore_unknown_options is a valid argument in many click versions
+        # If it still fails, we can remove it and try another way.
+        super().__init__(name, **kwargs)
+        self.delegate = delegate
+
+    def get_command(self, ctx, name):
+        # Return None so that click doesn't try to find a subcommand within this group
+        # and instead lets the invoke() method handle the arguments.
+        return None
+
+    def invoke(self, ctx):
+        # We manually call the delegate's main method with the remaining arguments
+        # This bypasses the need for the delegate to be a 'core' click object
+        try:
+            # If the delegate is a function (factory), call it first.
+            # click.Group is also callable, so we check if it already has 'main' or 'commands'.
+            if callable(self.delegate) and not hasattr(self.delegate, 'main') and not hasattr(self.delegate, 'commands'):
+                logger.debug(f"Calling delegate factory {self.delegate}")
+                actual_delegate = self.delegate()
+                logger.debug(f"Factory returned {actual_delegate}")
+            else:
+                actual_delegate = self.delegate
+            
+            if actual_delegate is None:
+                raise RuntimeError(f"Delegate for {self.name} resolved to None")
+
+            # If the delegate is a click object (Group or Command), it doesn't have a .main() method.
+            # We check for .main() first (for wrapper objects), otherwise we call it directly.
+            if hasattr(actual_delegate, 'main') and callable(actual_delegate.main):
+                actual_delegate.main(args=ctx.args, standalone_mode=True)
+            elif callable(actual_delegate):
+                # For click.Group/Command, we can't easily call them with args from here
+                # without creating a new context. The safest way is to use a subprocess
+                # or to use the click internal API.
+                # However, since we are in a DelegatingCommand, we can try to invoke it.
+                try:
+                    # Try to use the click object's own entry point logic if it's a group
+                    if hasattr(actual_delegate, 'cli'):
+                        actual_delegate.cli(args=ctx.args, standalone_mode=True)
+                    else:
+                        # Fallback: call it as a function if it's a simple wrapper
+                        actual_delegate(args=ctx.args, standalone_mode=True)
+                except TypeError:
+                    # If it doesn't accept args, it might be a standard click object
+                    # In that case, we might need to use a different approach.
+                    # For now, let's try to call it.
+                    actual_delegate()
+            else:
+                raise RuntimeError(f"Delegate for {self.name} is not callable and has no .main() method")
+        except Exception as e:
+            logger.error(f"Delegation failed for {self.name}: {e}")
+            sys.exit(1)
 
 class SubcommandHelpGroup(click.Group):
     """Custom Click Group to show subcommands in help output with dynamic width."""
 
     def get_command(self, ctx, name):
         """Override to support lazy loading of extensions."""
+        logger.debug(f"get_command called for {name}")
         cmd = super().get_command(ctx, name)
-        if isinstance(cmd, LazyCommand):
+        logger.debug(f"initial cmd type for {name}: {type(cmd)}")
+        
+        # Use attribute check instead of isinstance to avoid Click version/instance mismatches
+        if hasattr(cmd, 'path') and hasattr(cmd, 'entry_point_name'):
+            # To prevent Click version mismatches between core and extensions,
+            # we ensure the extension uses the same click module as the core.
+            import click as core_click
+            sys.modules['click'] = core_click
+
             # Load the actual command
-            if cmd.path:
+            if getattr(cmd, 'path', None):
                 # Registry-based extension
-                module = registry._load_extension(cmd.name, cmd.path)
+                module = registry._load_extension(name, cmd.path)
                 if module:
                     cmd = getattr(module, cmd.entry_point_name, None)
-            elif cmd.module_name:
+            elif getattr(cmd, 'module_name', None):
                 # Core or Pip extension
                 try:
                     module = importlib.import_module(cmd.module_name)
@@ -66,6 +128,23 @@ class SubcommandHelpGroup(click.Group):
                     cmd = None
 
             if cmd:
+                # If the entry point is 'main', it's often just a wrapper that calls the real CLI.
+                # We try to find the actual click object in the module.
+                if getattr(cmd, '__name__', None) == 'main' and module:
+                    for attr_name in ['cli', 'entry_point', 'group']:
+                        attr = getattr(module, attr_name, None)
+                        if attr and callable(attr):
+                            logger.debug(f"Found actual click object or factory {attr_name} instead of main wrapper")
+                            cmd = attr
+                            break
+
+                logger.debug(f"loaded cmd type for {name}: {type(cmd)}")
+                # If the loaded command is seen as a function but is actually a click.Group from a different instance,
+                # we wrap it in a DelegatingCommand to avoid Click version mismatches.
+                if callable(cmd) and not hasattr(cmd, 'make_context'):
+                    logger.debug(f"Wrapping {name} in DelegatingCommand due to Click version mismatch")
+                    cmd = DelegatingCommand(name=name, delegate=cmd)
+                
                 # Cache the loaded command in the group
                 self.commands[name] = cmd
         return cmd
@@ -108,52 +187,31 @@ class SubcommandHelpGroup(click.Group):
             formatter.write_dl(rows)
 
 
-# Initialize registry globally so extensions can import it
-registry = CommandRegistry()
 
 
-@click.group(cls=SubcommandHelpGroup)
-@click.option("--debug", is_flag=True, help="Enable debug logging.")
-@click.pass_context
-def cli(ctx, debug):
-    """cmc: Cloudmesh Commands."""
-    if debug:
-        logger.setLevel(logging.DEBUG)
-        logger.debug("Debug logging enabled")
+# Use standard click.Group during Sphinx builds to avoid issues with SubcommandHelpGroup
+if os.getenv("SPHINX_BUILD") == "1":
+    @click.group()
+    @click.option("--debug", is_flag=True, help="Enable debug logging.")
+    @click.pass_context
+    def cli(ctx, debug):
+        """cmc: Cloudmesh Commands."""
+        pass
+else:
+    @click.group(cls=SubcommandHelpGroup)
+    @click.option("--debug", is_flag=True, help="Enable debug logging.")
+    @click.pass_context
+    def cli(ctx, debug):
+        """cmc: Cloudmesh Commands."""
+        if debug:
+            logger.setLevel(logging.DEBUG)
+            logger.debug("Debug logging enabled")
 
 
 
 
 
 
-@cli.command(name="version")
-def version():
-    """Display the current version of cmc and active extensions."""
-    from importlib.metadata import version as get_version
-
-    console = Console()
-
-    try:
-        core_version = get_version("cloudmesh-ai-cmc")
-    except Exception:
-        core_version = "Unknown"
-
-    console.print(f"[bold blue]cmc version {core_version}[/bold blue]\n")
-
-    details = registry.list_all_details()
-    if not details:
-        console.print("No active extensions registered.")
-        return
-
-    table = Table(title="Active Extensions")
-    table.add_column("Name", style="cyan")
-    table.add_column("Version", style="magenta")
-    table.add_column("Path", style="green")
-
-    for item in details:
-        table.add_row(item["name"], item["version"], item["path"])
-
-    console.print(table)
 
 
 def load_core_extensions(cli):
@@ -165,8 +223,7 @@ def load_core_extensions(cli):
 
     # We use a list of known core extensions to be absolutely sure they are loaded
     # if dynamic discovery fails.
-    core_modules = ["banner", "tree", "man", "command", "docs"]
-
+    core_modules = ["banner", "tree", "man", "command", "docs", "doctor", "plugins", "telemetry", "config", "version", "shell", "completion"]
     for module_name in core_modules:
         try:
             full_module_name = f"cloudmesh.ai.command.{module_name}"
@@ -252,58 +309,28 @@ def load_pip_extensions(cli):
             name=entry_point.name,
         )
 
+# Eagerly load core extensions at module level so they are visible to sphinx-click
+load_core_extensions(cli)
 
 
 
-@cli.command(name="completion")
-@click.pass_context
-def completion(ctx):
-    """Generate shell completion script for the current shell."""
-    try:
-        shell, _ = shellingham.detect_shell()
-    except Exception:
-        shell = "bash"
-
-    completion_map = {
-        "bash": {
-            "eval": 'eval "$(_CME_COMPLETE=bash_source cmc)"',
-            "profile": "~/.bashrc",
-        },
-        "zsh": {
-            "eval": 'eval "$(_CME_COMPLETE=zsh_source cmc)"',
-            "profile": "~/.zshrc",
-        },
-        "fish": {
-            "eval": "eval (_CME_COMPLETE=fish_source cmc)",
-            "profile": "~/.config/fish/config.fish",
-        },
-    }
-
-    shell_info = completion_map.get(shell)
-    if not shell_info:
-        click.echo(f"# Shell {shell} not supported.")
-        return
-
-    click.echo("Current Session Activation:")
-    click.echo(shell_info["eval"])
-    click.echo("")
-    click.echo(f"Permanent Activation (add to {shell_info['profile']}):")
-    click.echo(f"echo '{shell_info['eval']}' >> {shell_info['profile']}")
 
 
+@handle_errors
 def main():
-    logger.debug("CMC main() is executing")
-    # 1. Load core extensions bundled with the package
-    load_core_extensions(cli)
+    # Use telemetry to track the entire execution of the cmc tool
+    with telemetry.track(message="Executing CMC command"):
+        logger.debug("CMC main() is executing")
+        # 1. Core extensions are now loaded at module level
 
-    # 2. Inject active plugin commands from the JSON registry lazily
-    lazy_cmds = registry.get_lazy_commands()
-    for name, obj in lazy_cmds.items():
-        cli.add_command(obj, name=name)
+        # 2. Inject active plugin commands from the JSON registry lazily
+        lazy_cmds = registry.get_lazy_commands()
+        for name, obj in lazy_cmds.items():
+            cli.add_command(obj, name=name)
 
-    # 3. Load extensions installed via pip (entry points)
-    load_pip_extensions(cli)
-    cli()
+        # 3. Load extensions installed via pip (entry points)
+        load_pip_extensions(cli)
+        cli()
 
 
 if __name__ == "__main__":

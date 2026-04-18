@@ -11,6 +11,7 @@ import os
 import importlib.util
 import sys
 import logging
+from cloudmesh.ai.cmc.utils import PluginDependencyError, PluginVersionError
 
 logger = logging.getLogger("cmc")
 
@@ -26,6 +27,12 @@ def get_version(path):
         with open(version_file, "r") as f:
             return f.read().strip()
     return "unknown"
+
+def version_ge(v1, v2):
+    """Simple semantic version comparison: returns True if v1 >= v2."""
+    def parse(v):
+        return [int(x) for x in v.split('.') if x.isdigit()]
+    return parse(v1) >= parse(v2)
 
 import click
 
@@ -65,7 +72,7 @@ class CommandRegistry:
     def _validate_config_structure(self, data):
         """
         Validates that the registry JSON has the expected structure:
-        { "ext_name": { "path": "...", "active": bool }, ... }
+        { "ext_name": { "path": "...", "active": bool, "dependencies": [] }, ... }
         """
         logger.debug(f"_validate_config_structure called with data: {data}")
         if not isinstance(data, dict):
@@ -75,6 +82,12 @@ class CommandRegistry:
         valid_data = {}
         for name, info in data.items():
             if isinstance(info, dict) and "path" in info and "active" in info:
+                # Ensure dependencies is always a list
+                if "dependencies" in info and not isinstance(info["dependencies"], list):
+                    logger.warning(f"Invalid dependencies for '{name}': expected list. Resetting to [].")
+                    info["dependencies"] = []
+                elif "dependencies" not in info:
+                    info["dependencies"] = []
                 valid_data[name] = info
             else:
                 logger.warning(f"Skipping invalid registry entry for '{name}': expected dict with 'path' and 'active'.")
@@ -94,12 +107,13 @@ class CommandRegistry:
             if os.path.exists(temp_path):
                 os.remove(temp_path)
 
-    def register(self, name, path):
+    def register(self, name, path, dependencies=None):
         config = self.load_config()
         key = name if name else os.path.basename(os.path.abspath(path))
         config[key] = {
             "path": os.path.abspath(path),
-            "active": True
+            "active": True,
+            "dependencies": dependencies or []
         }
         self.save(config)
 
@@ -134,11 +148,27 @@ class CommandRegistry:
         """
         Helper to dynamically load an extension module from a path.
         Returns the module if successful and valid, otherwise None.
-        Includes circular dependency detection.
+        Includes circular dependency detection and dependency resolution.
         """
         if name in self._loading_stack:
             logger.error(f"Circular dependency detected while loading extension '{name}'")
             return None
+
+        # 1. Resolve and load dependencies first
+        config = self.load_config()
+        info = config.get(name, {})
+        dependencies = info.get("dependencies", [])
+        
+        for dep_name in dependencies:
+            dep_info = config.get(dep_name)
+            if not dep_info:
+                raise PluginDependencyError(f"Extension '{name}' depends on '{dep_name}', but it is not registered.")
+            if not dep_info.get("active", True):
+                raise PluginDependencyError(f"Extension '{name}' depends on '{dep_name}', but it is inactive.")
+            
+            # Recursively load the dependency
+            if not self._load_extension(dep_name, dep_info["path"]):
+                raise PluginDependencyError(f"Failed to load dependency '{dep_name}' for extension '{name}'.")
 
         self._loading_stack.add(name)
         try:
@@ -168,16 +198,25 @@ class CommandRegistry:
             if self._validate_extension(name, module):
                 return module
         except Exception as e:
-            logger.error(f"Error loading extension '{name}': {e}")
+            import traceback
+            logger.debug(f"Error loading extension '{name}': {e}")
+            logger.debug(traceback.format_exc())
         finally:
             self._loading_stack.remove(name)
         return None
 
     def _validate_extension(self, name, module):
         """
-        Validates that the loaded module has a valid entry_point.
+        Validates that the loaded module has a valid entry_point and recommended metadata.
         """
         logger.debug(f"_validate_extension called for {name}")
+        
+        # Check for minimum CMC version requirement
+        if hasattr(module, 'min_cmc_version'):
+            cmc_version = get_version(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+            if not version_ge(cmc_version, module.min_cmc_version):
+                raise PluginVersionError(f"Extension '{name}' requires CMC version {module.min_cmc_version} or higher (current: {cmc_version})")
+
         if not hasattr(module, 'entry_point'):
             logger.debug(f"Validation failed for {name}: Missing entry_point")
             logger.error(f"Validation failed for '{name}': Missing 'entry_point' in cmd.py")
@@ -188,6 +227,11 @@ class CommandRegistry:
             logger.debug(f"Validation failed for {name}: entry_point is not callable")
             logger.error(f"Validation failed for '{name}': 'entry_point' must be a callable (e.g., a Click command)")
             return False
+
+        # Check for recommended metadata
+        for attr in ['version', 'description']:
+            if not hasattr(module, attr):
+                logger.warning(f"Extension '{name}' is missing recommended metadata: {attr}")
             
         logger.debug(f"Validation succeeded for {name}")
         return True
@@ -199,9 +243,12 @@ class CommandRegistry:
         for name, info in config.items():
             if not info.get("active", False):
                 continue
-            module = self._load_extension(name, info["path"])
-            if module:
-                commands[name] = module.entry_point
+            try:
+                module = self._load_extension(name, info["path"])
+                if module:
+                    commands[name] = module.entry_point
+            except (PluginDependencyError, PluginVersionError) as e:
+                logger.error(f"Skipping plugin '{name}': {e}")
         return commands
 
     def get_lazy_commands(self):
@@ -228,6 +275,9 @@ class CommandRegistry:
         for name, info in config.items():
             if not info.get("active", True):
                 continue
-            module = self._load_extension(name, info["path"])
-            if module:
-                cli.add_command(module.entry_point, name=name)
+            try:
+                module = self._load_extension(name, info["path"])
+                if module:
+                    cli.add_command(module.entry_point, name=name)
+            except (PluginDependencyError, PluginVersionError) as e:
+                logger.error(f"Skipping plugin '{name}': {e}")

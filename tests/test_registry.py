@@ -2,7 +2,7 @@ import os
 import json
 import pytest
 from unittest.mock import patch
-from cloudmesh.ai.registry import CommandRegistry
+from cloudmesh.ai.cmc.registry import CommandRegistry
 
 @pytest.fixture
 def temp_registry_path(tmp_path):
@@ -12,7 +12,7 @@ def temp_registry_path(tmp_path):
 @pytest.fixture
 def registry(temp_registry_path):
     """Provides a CommandRegistry instance with a mocked CONFIG_PATH."""
-    with patch("cloudmesh.ai.registry.CONFIG_PATH", temp_registry_path):
+    with patch("cloudmesh.ai.cmc.registry.CONFIG_PATH", temp_registry_path):
         reg = CommandRegistry()
         yield reg
 

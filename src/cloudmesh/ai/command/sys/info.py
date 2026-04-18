@@ -1,9 +1,8 @@
 import click
-import platform
-import os
 from rich.console import Console
 from rich.table import Table
 from rich import box
+from cloudmesh.ai.common import sys as ai_sys
 
 
 console = Console()
@@ -26,7 +25,9 @@ def sys_info():
         cme sys info
     """
     try:
-        # IDENTICAL STYLE CONFIGURATION
+        # Use the improved systeminfo from cloudmesh.ai.common
+        info = ai_sys.systeminfo()
+
         table = Table(
             title="CME System Information",
             show_header=True,
@@ -34,20 +35,14 @@ def sys_info():
             box=box.ROUNDED,
         )
 
-        # Column 1: Cyan and width=20 for alignment
-        table.add_column("Attribute", style="blue", width=20)
-        # Column 2: White/Default for the value
-        table.add_column("Value", style="black")
+        table.add_column("Attribute", style="blue", width=25)
+        table.add_column("Value", style="white")
 
-        # Data gathering
-        table.add_row("OS", f"{platform.system()} {platform.release()}")
-        table.add_row("Version", platform.version())
-        table.add_row("Architecture", platform.machine())
-        table.add_row("Processor", platform.processor())
-        table.add_row("Node", platform.node())
-        table.add_row("User", os.getlogin())
-        table.add_row("CWD", os.getcwd())
-        table.add_row("Python", platform.python_version())
+        # Sort keys for consistent display
+        for key in sorted(info.keys()):
+            # Make keys more readable (e.g., uname.system -> Uname System)
+            label = key.replace('.', ' ').replace('_', ' ').title()
+            table.add_row(label, str(info[key]))
 
         console.print(table)
 

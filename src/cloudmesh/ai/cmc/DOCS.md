@@ -15,17 +15,14 @@ Its core strength lies in its **Extension Registry**, which allows you to load p
 
 ## Install
 
-### Linux
+> **Note:** `cmc` is primarily developed on Linux and macOS. As the developers do not use Windows (PowerShell), we strongly recommend using **Git Bash** or **WSL2** for the best experience on Windows.
+
+### Linux / macOS / Git Bash
 ```bash
 pip install cloudmesh-ai-cmc
 ```
 
-### macOS
-```bash
-pip install cloudmesh-ai-cmc
-```
-
-### Windows
+### Windows (PowerShell/CMD)
 It is recommended to use a Python virtual environment:
 ```powershell
 python -m venv venv
@@ -53,7 +50,12 @@ pip install cloudmesh-ai-cmc
    cmc --help
    ```
 
-3. **Read the Documentation**:
+3. **Enter Interactive Mode**:
+   ```bash
+   cmc shell
+   ```
+
+4. **Read the Documentation**:
    ```bash
    cmc docs
    ```
@@ -69,18 +71,31 @@ pip install cloudmesh-ai-cmc
 | `version` | Displays the current version of `cmc` and a list of active extensions. | `cmc version` |
 | `docs` | Displays this comprehensive documentation in the terminal. | `cmc docs` |
 | `completion` | Generates shell completion scripts for Bash, Zsh, or Fish. | `cmc completion` |
+| `shell` | Enters an interactive shell for executing CMC commands. | `cmc shell` |
+| `doctor` | Performs a comprehensive health check of the CMC environment, including AI hardware (GPU/CUDA). | `cmc doctor` |
 
-### Extension Management
+### Plugin Management
 
-The `command` group allows you to manage local extensions without needing to package them as pip modules.
+Manage local extensions using the `plugins` group.
 
 | Command | Description | Example |
 | :--- | :--- | :--- |
-| `command list` | Lists all available extensions (Core, Pip, and Registered). | `cmc command list` |
-| `command load` | Registers and loads a new extension from a directory. | `cmc command load --dir /path/to/ext` |
-| `command activate` | Enables a previously registered extension. | `cmc command activate my-extension` |
-| `command deactivate` | Disables an extension, removing it from the active list. | `cmc command deactivate my-extension` |
-| `command unload` | Completely removes an extension from the registry. | `cmc command unload my-extension` |
+| `plugins list` | Lists all registered plugins and their status. | `cmc plugins list` |
+| `plugins add <path>` | Registers a new plugin from a directory. | `cmc plugins add ./my-plugin` |
+| `plugins enable <name>` | Activates a registered plugin. | `cmc plugins enable my-plugin` |
+| `plugins disable <name>` | Deactivates a registered plugin. | `cmc plugins disable my-plugin` |
+| `plugins remove <name>` | Completely removes a plugin from the registry. | `cmc plugins remove my-plugin` |
+| `plugins check` | Verifies that all registered plugins are importable and valid. | `cmc plugins check` |
+| `init-plugin <name>` | Scaffolds a new CMC plugin directory structure. | `cmc init-plugin my-new-tool` |
+
+### Configuration & Telemetry
+
+| Command | Description | Example |
+| :--- | :--- | :--- |
+| `config get <key>` | Retrieves a configuration value. | `cmc config get telemetry.enabled` |
+| `config set <key> <val>` | Updates a configuration value. | `cmc config set logging.level DEBUG` |
+| `config list` | Shows all current configurations. | `cmc config list` |
+| `telemetry` | Analyzes CMC telemetry data with filtering and export options. | `cmc telemetry --status FAILURE` |
 
 ### Built-in Extensions
 
@@ -92,126 +107,80 @@ The `command` group allows you to manage local extensions without needing to pac
 
 ---
 
+## Configuration & Environment
+
+`cmc` uses a YAML configuration file located at `~/.config/cloudmesh/ai/cmc.yaml`.
+
+### Environment Variable Overrides
+You can override any configuration setting using environment variables with the `CMC_` prefix. Dot-separated keys are converted to underscores and uppercase.
+
+**Example:**
+- `telemetry.path` $\rightarrow$ `CMC_TELEMETRY_PATH`
+- `logging.level` $\rightarrow$ `CMC_LOGGING_LEVEL`
+
+```bash
+# Override log level for a single execution
+CMC_LOGGING_LEVEL=DEBUG cmc doctor
+```
+
+---
+
 ## Logging and Debugging
 
-`cmc` uses a configurable logging system to help with troubleshooting and development. You can control the granularity of the output using the `CMC_LOG_LEVEL` environment variable or the `--debug` flag.
+`cmc` uses a configurable logging system. You can control the granularity of the output using the `CMC_LOGGING_LEVEL` environment variable or the `--debug` flag.
 
 ### Log Levels
-The following levels are supported (in order of increasing verbosity):
 - `ERROR`: Only critical errors are shown.
 - `WARNING`: Errors and potential issues are shown (Default).
 - `INFO`: General operational messages.
 - `DEBUG`: Detailed diagnostic information, including extension loading and validation steps.
 
 ### Usage
-To enable debug logging, you can use either of the following methods:
-
-**1. Using the environment variable:**
 ```bash
-# Enable debug logging for a single command
-CMC_LOG_LEVEL=DEBUG cmc speedtest run ...
-
-# Set it for the current session
-export CMC_LOG_LEVEL=DEBUG
-cmc speedtest run ...
-```
-
-**2. Using the CLI flag:**
-```bash
-cmc --debug speedtest run ...
+# Using the CLI flag
+cmc --debug doctor
 ```
 
 ---
 
 ## Extensions
 
-### Extension Management
-
-Extensions are the heart of `cmc`. You can manage them using the `registry` commands. When you `add` a directory to the registry, `cmc` looks for a compatible entry point (a `click.Command` or a `register` function) within that directory to integrate it into the CLI.
-
 ### Extension Creation
 
-The easiest way to create a new extension is using the built-in scaffolding tool.
-
-#### 1. Automated Scaffolding
-Use the `cmc command create` tool to generate a complete project structure, including `pyproject.toml` and the necessary source directories.
-
-**Basic creation:**
+The easiest way to create a new extension is using the built-in scaffolding tool:
 ```bash
-cmc command create my-extension
+cmc init-plugin my-extension
 ```
 
-**Creation with multiple sub-commands:**
-If you want your extension to have multiple functions, use the `--groups` flag:
-```bash
-cmc command create my-tool -g analyze -g report -g clean
-```
+### Manual Implementation
+An extension is a Python module that defines a `click` command. To ensure proper integration, include the following metadata:
 
-**Specify output path:**
-```bash
-cmc command create my-tool --path ~/projects/ai-plugins
-```
-
-This creates a directory `cloudmesh-ai-my-tool` with a ready-to-use Python plugin.
-
-#### 2. Manual Implementation (Optional)
-If you prefer to build it manually, an extension is simply a Python module that defines a `click` command.
-
-**Basic Structure:**
-```text
-my-extension/
-└── my_extension.py
-```
-
-**Implementation:**
 ```python
 import click
 
+version = "0.1.0"
+description = "My awesome AI extension"
+dependencies = []  # List of other plugin names this plugin depends on
+
 @click.command()
 def entry_point():
-    """My awesome AI extension."""
-    click.echo("Hello from my custom extension!")
+    """Plugin description here."""
+    click.echo("Hello from the new plugin!")
 ```
 
-#### 3. Registering and Using your extension
-Once created (either via `command create` or manually), register the directory with `cmc`:
-
-```bash
-# Register the extension
-cmc registry add /path/to/my-extension
-
-# Use the extension
-cmc my-extension
-```
-
-#### 4. Advanced Extensions: Using `register(cli)`
-
-For complex extensions that require multiple sub-commands, you can implement a `register(cli)` function. This function is automatically called by `cmc` when the extension is loaded.
-
-**Example Implementation:**
+### Advanced Extensions: Using `register(cli)`
+For complex extensions with multiple sub-commands, implement a `register(cli)` function:
 
 ```python
 import click
 
 @click.command()
 def start():
-    """Start the service."""
     click.echo("Service started!")
 
-@click.command()
-def stop():
-    """Stop the service."""
-    click.echo("Service stopped!")
-
 def register(cli):
-    """Register multiple commands under a group."""
     @cli.group(name="myservice")
     def service_group():
         """Manage the custom service."""
         pass
-    
     service_group.add_command(start)
-    service_group.add_command(stop)
-```
-
-With this approach, your commands will be available as `cmc myservice start` and `cmc myservice stop`.

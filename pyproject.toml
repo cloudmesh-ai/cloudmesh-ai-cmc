@@ -14,7 +14,8 @@ dependencies = [
     "shellingham",
     "pytest",
     "pip-tools",
-    "twine"
+    "twine",
+    "cloudmesh-ai-common",
 ]
 
 [project.scripts]
