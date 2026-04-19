@@ -12,19 +12,20 @@ The tool includes an internal ignore list to filter out common noise
 Usage Examples:
 -------------------------------------------------------------------------------
 1. Display the structure of the current directory:
-   $ cme tree
+   ``$ cme tree``
 
 2. Display a specific path and show previews of file contents:
-   $ cme tree ./src --content
+   ``$ cme tree ./src --content``
 
 3. Exclude specific patterns (e.g., all .txt files):
-   $ cme tree --exclude="*.txt"
+   ``$ cme tree --exclude="*.txt"``
 
 4. Only show Python files using the include flag:
-   $ cme tree --include="*.py"
+   ``$ cme tree --include="*.py"``
 
 5. Combine exclude and include for precise filtering:
-   $ cme tree --include="*.py" --exclude="tests/*"
+   ``$ cme tree --include="*.py" --exclude="tests/*"``
+
 -------------------------------------------------------------------------------
 """
 
