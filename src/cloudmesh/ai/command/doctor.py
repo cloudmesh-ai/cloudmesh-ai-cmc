@@ -16,7 +16,7 @@ from rich.table import Table
 from rich.panel import Panel
 from rich import box
 
-from cloudmesh.ai.cmc.context import config, registry, telemetry_enabled
+from cloudmesh.ai.cmc.context import config, telemetry_enabled
 from cloudmesh.ai.cmc.utils import handle_errors
 
 def check_system_dependency(command: list):
@@ -79,16 +79,6 @@ def doctor():
         except Exception as e:
             ext_table.add_row(mod, core_version, "Core", f"[red]Error: {e}[/red]")
 
-    # Registry
-    details = registry.list_all_details()
-    for item in details:
-        try:
-            registry._load_extension(item["name"], item["path"])
-            version = item.get("version", "Unknown")
-            status = "[green]OK[/green]" if version != "Unknown" else "[yellow]Warning: Missing Version[/yellow]"
-            ext_table.add_row(item["name"], version, "Registry", status)
-        except Exception as e:
-            ext_table.add_row(item["name"], item.get("version", "Unknown"), "Registry", f"[red]Error: {e}[/red]")
 
     # Pip
     eps = entry_points().select(group="cloudmesh.ai.command")
@@ -105,38 +95,6 @@ def doctor():
 
     console.print(ext_table)
 
-    # 3b. Plugin Structural Health Check
-    console.print("\n[bold]3b. Plugin Structural Health Check[/bold]")
-    struct_table = Table(show_header=True, header_style="bold magenta", box=box.ROUNDED)
-    struct_table.add_column("Plugin")
-    struct_table.add_column("VERSION File", justify="center")
-    struct_table.add_column("cmd.py", justify="center")
-    struct_table.add_column("Entry Point", justify="center")
-    struct_table.add_column("src/", justify="center")
-    struct_table.add_column("tests/", justify="center")
-
-    for item in details:
-        name = item["name"]
-        path = Path(item["path"])
-        
-        # Check files/dirs
-        has_version = "[green]✓[/green]" if (path / "VERSION").exists() else "[red]✗[/red]"
-        has_cmd = "[green]✓[/green]" if (path / "cmd.py").exists() else "[red]✗[/red]"
-        has_src = "[green]✓[/green]" if (path / "src").is_dir() else "[red]✗[/red]"
-        has_tests = "[green]✓[/green]" if (path / "tests").is_dir() else "[red]✗[/red]"
-        
-        # Check entry_point
-        has_entry = "[red]✗[/red]"
-        try:
-            module = registry._load_extension(name, str(path))
-            if hasattr(module, "entry_point"):
-                has_entry = "[green]✓[/green]"
-        except:
-            pass
-            
-        struct_table.add_row(name, has_version, has_cmd, has_entry, has_src, has_tests)
-    
-    console.print(struct_table)
 
     # 4. Environment Check
     console.print("\n[bold]4. Environment Check[/bold]")

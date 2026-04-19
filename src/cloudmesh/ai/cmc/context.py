@@ -10,7 +10,6 @@ import logging
 from cloudmesh.ai.common import logging as ai_log
 from cloudmesh.ai.common.telemetry import Telemetry, JSONFileBackend, TextBackend
 from cloudmesh.ai.cmc.utils import Config
-from cloudmesh.ai.cmc.registry import CommandRegistry
 
 # Initialize Configuration
 config = Config()
@@ -32,5 +31,3 @@ if telemetry_enabled:
 
 telemetry = Telemetry(command_name="cmc", backends=backends)
 
-# Initialize registry globally so extensions can import it
-registry = CommandRegistry()

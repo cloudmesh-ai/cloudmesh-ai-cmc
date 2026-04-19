@@ -2,8 +2,9 @@ import os
 import pytest
 from pathlib import Path
 from click.testing import CliRunner
-from cloudmesh.ai.cmc.context import config
+from cloudmesh.ai.cmc.context import config, registry
 from cloudmesh.ai.cmc.main import cli
+from cloudmesh.ai.cmc.registry import CommandRegistry
 
 def test_dynamic_config():
     """Test that config allows keys not in the schema."""
@@ -48,9 +49,14 @@ def test_plugin_docs_generation(tmp_path):
     runner = CliRunner()
     output_file = tmp_path / "gallery.rst"
     
-    # We need at least one plugin registered for the gallery to be generated
-    # The registry is a singleton, so we can just add a dummy path if needed
-    # but usually some core plugins are there.
+    # Create a dummy plugin to ensure the gallery is generated
+    plugin_dir = tmp_path / "dummy_plugin"
+    plugin_dir.mkdir()
+    cmd_file = plugin_dir / "cmd.py"
+    cmd_file.write_text("import click\n\n@click.command()\ndef entry_point():\n    pass\n\nversion = '1.0.0'\ndescription = 'Dummy plugin for testing'")
+    
+    # Register the dummy plugin
+    registry.register("dummy_plugin", str(plugin_dir))
     
     result = runner.invoke(cli, ["plugins", "docs", "--output", str(output_file)])
     assert result.exit_code == 0

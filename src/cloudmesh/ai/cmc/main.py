@@ -29,13 +29,20 @@ from rich.console import Group
 from rich.text import Text
 from rich import box
 import cloudmesh.ai.command as extensions  # Import the extension package
-from cloudmesh.ai.cmc.registry import CommandRegistry
 from importlib.metadata import entry_points
+from dataclasses import dataclass
 
-from cloudmesh.ai.cmc.context import config, logger, telemetry, registry
+@dataclass
+class LazyCommand:
+    name: str
+    module_name: str
+    entry_point_name: str
+    hidden: bool = False
 
+    def get_short_help_str(self, limit=None):
+        return "Lazy-loaded extension"
 
-from cloudmesh.ai.cmc.registry import CommandRegistry, LazyCommand
+from cloudmesh.ai.cmc.context import config, logger, telemetry
 
 
 class DelegatingCommand(click.Group):
@@ -111,12 +118,7 @@ class SubcommandHelpGroup(click.Group):
             sys.modules['click'] = core_click
 
             # Load the actual command
-            if getattr(cmd, 'path', None):
-                # Registry-based extension
-                module = registry._load_extension(name, cmd.path)
-                if module:
-                    cmd = getattr(module, cmd.entry_point_name, None)
-            elif getattr(cmd, 'module_name', None):
+            if getattr(cmd, 'module_name', None):
                 # Core or Pip extension
                 try:
                     module = importlib.import_module(cmd.module_name)
@@ -332,12 +334,7 @@ def main():
 
         # 1. Core extensions are now loaded at module level
 
-        # 2. Inject active plugin commands from the JSON registry lazily
-        lazy_cmds = registry.get_lazy_commands()
-        for name, obj in lazy_cmds.items():
-            cli.add_command(obj, name=name)
-
-        # 3. Load extensions installed via pip (entry points)
+        # 2. Load extensions installed via pip (entry points)
         load_pip_extensions(cli)
         cli()
 

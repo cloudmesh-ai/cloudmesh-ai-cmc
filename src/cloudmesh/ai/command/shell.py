@@ -27,7 +27,7 @@ try:
 except ImportError:
     HAS_READLINE = False
 
-from cloudmesh.ai.cmc.context import logger, registry
+from cloudmesh.ai.cmc.context import logger
 
 console = Console()
 
@@ -66,9 +66,6 @@ def get_command_completer():
         shell_commands = ["exit", "quit", "q", "help", "set", "h"]
         commands.update(shell_commands)
         
-        # 3. Add plugin names from registry as a fallback
-        details = registry.list_all_details()
-        commands.update([item["name"] for item in details])
         
         return WordCompleter(list(commands), ignore_case=True)
     except Exception as e:
