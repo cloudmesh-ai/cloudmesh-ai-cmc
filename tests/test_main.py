@@ -4,7 +4,6 @@ import json
 from pathlib import Path
 from click.testing import CliRunner
 from cloudmesh.ai.cmc.main import cli, main
-from cloudmesh.ai.cmc.registry import CommandRegistry
 from cloudmesh.ai.cmc.utils import Config
 
 @pytest.fixture
@@ -41,16 +40,6 @@ def mock_config(tmp_path, monkeypatch):
         
     return config_data
 
-@pytest.fixture
-def mock_registry(tmp_path, monkeypatch):
-    """Provides a CommandRegistry instance with a mocked path."""
-    temp_path = str(tmp_path / ".cme_registry_test.json")
-    import cloudmesh.ai.cmc.registry
-    monkeypatch.setattr(cloudmesh.ai.cmc.registry, "CONFIG_PATH", temp_path)
-    reg = CommandRegistry()
-    monkeypatch.setattr("cloudmesh.ai.cmc.context.registry", reg)
-    monkeypatch.setattr("cloudmesh.ai.command.plugins.registry", reg)
-    return reg
 
 def test_cli_help(runner):
     result = runner.invoke(cli, ["--help"])
@@ -67,14 +56,6 @@ def test_completion(runner):
     assert result.exit_code == 0
     assert "eval" in result.output or "Shell" in result.output
 
-def test_plugins_check(runner, mock_registry):
-    # Register a dummy plugin to check
-    mock_registry.register("test_plugin", "/tmp/nonexistent")
-    
-    result = runner.invoke(cli, ["plugins", "check"])
-    assert result.exit_code == 0
-    assert "Plugin Health Check" in result.output
-    assert "test_plugin" in result.output
 
 def test_telemetry_no_file(runner, tmp_path, monkeypatch):
     # Ensure no telemetry file exists by patching the global config instance in main

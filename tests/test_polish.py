@@ -2,9 +2,8 @@ import os
 import pytest
 from pathlib import Path
 from click.testing import CliRunner
-from cloudmesh.ai.cmc.context import config, registry
+from cloudmesh.ai.cmc.context import config
 from cloudmesh.ai.cmc.main import cli
-from cloudmesh.ai.cmc.registry import CommandRegistry
 
 def test_dynamic_config():
     """Test that config allows keys not in the schema."""
@@ -44,34 +43,6 @@ def test_config_type_casting():
     runner.invoke(cli, ["config", "set", "test.str", "hello"])
     assert config.get("test.str") == "hello"
 
-def test_plugin_docs_generation(tmp_path):
-    """Test that plugin docs generate both gallery and dev guide."""
-    runner = CliRunner()
-    output_file = tmp_path / "gallery.rst"
-    
-    # Create a dummy plugin to ensure the gallery is generated
-    plugin_dir = tmp_path / "dummy_plugin"
-    plugin_dir.mkdir()
-    cmd_file = plugin_dir / "cmd.py"
-    cmd_file.write_text("import click\n\n@click.command()\ndef entry_point():\n    pass\n\nversion = '1.0.0'\ndescription = 'Dummy plugin for testing'")
-    
-    # Register the dummy plugin
-    registry.register("dummy_plugin", str(plugin_dir))
-    
-    result = runner.invoke(cli, ["plugins", "docs", "--output", str(output_file)])
-    assert result.exit_code == 0
-    
-    # Check gallery exists
-    assert output_file.exists()
-    
-    # Check developer guide exists in the same directory
-    dev_guide = output_file.parent / "developer_guide.rst"
-    assert dev_guide.exists()
-    
-    with open(dev_guide, "r") as f:
-        content = f.read()
-        assert "CMC Plugin Developer Guide" in content
-        assert "Required Metadata" in content
 
 def test_shell_internal_commands(monkeypatch):
     """

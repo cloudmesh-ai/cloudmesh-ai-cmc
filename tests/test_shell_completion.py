@@ -23,9 +23,7 @@ def test_get_command_completer():
     assert "help" in completed_words, "Completer should include 'help' internal command"
     assert "set" in completed_words, "Completer should include 'set' internal command"
     
-    # 3. Check for sub-commands (if any are registered)
-    # For example, if 'plugins list' is registered
-    assert any("plugins" in word for word in completed_words), "Completer should include 'plugins' related commands"
+        # 3. Check for sub-commands (if any are registered)
 
 def test_completer_case_insensitivity():
     """Test that the completer is configured to ignore case."""

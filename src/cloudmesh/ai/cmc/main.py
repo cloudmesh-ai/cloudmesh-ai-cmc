@@ -111,7 +111,7 @@ class SubcommandHelpGroup(click.Group):
         logger.debug(f"initial cmd type for {name}: {type(cmd)}")
         
         # Use attribute check instead of isinstance to avoid Click version/instance mismatches
-        if hasattr(cmd, 'path') and hasattr(cmd, 'entry_point_name'):
+        if hasattr(cmd, 'module_name') and hasattr(cmd, 'entry_point_name'):
             # To prevent Click version mismatches between core and extensions,
             # we ensure the extension uses the same click module as the core.
             import click as core_click

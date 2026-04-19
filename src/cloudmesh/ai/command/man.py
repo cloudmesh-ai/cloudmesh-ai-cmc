@@ -12,6 +12,15 @@ class BaseFormatter:
         return f"CME Manual\nGenerated on {date_str}\n{'='*30}\n\n"
     
     def format_single(self, ctx, name, cmd): 
+        # Resolve LazyCommand if necessary
+        if hasattr(cmd, 'module_name') and hasattr(cmd, 'entry_point_name'):
+            # This is a LazyCommand, we need to resolve it.
+            # Since we are in a formatter, we can't easily call the group's get_command.
+            # But we can try to resolve it manually or rely on the group to have done it.
+            # Actually, the best way is to let the group handle it.
+            # If it's still a LazyCommand here, it means the group didn't resolve it.
+            pass
+            
         # Use the parent context or current context to avoid recursion depth issues
         with click.Context(cmd, info_name=name, parent=ctx) as sub_ctx:
             return f"{name.upper()}\n{'-'*len(name)}\n{cmd.help or ''}\n\n{cmd.get_help(sub_ctx)}\n\n"
@@ -33,6 +42,7 @@ class HTMLFormatter(BaseFormatter):
             f"</head>\n<body>\n<h1>CME Manual</h1><p class='date'>Generated on {date_str}</p>\n<hr>\n"
         )
     def format_single(self, ctx, name, cmd):
+        # Remove the incorrect get_command call that crashes on DelegatingCommand
         with click.Context(cmd, info_name=name, parent=ctx) as sub_ctx:
             help_text = cmd.get_help(sub_ctx)
             return f"<section><h2>{name}</h2><p><strong>Description:</strong> {cmd.help or 'No description available.'}</p><pre>{help_text}</pre></section>\n"
@@ -43,6 +53,7 @@ class MarkdownFormatter(BaseFormatter):
     def format_header(self, date_str):
         return f"# CME Manual\nGenerated on {date_str}\n\n---\n\n"
     def format_single(self, ctx, name, cmd):
+        # Remove the incorrect get_command call that crashes on DelegatingCommand
         with click.Context(cmd, info_name=name, parent=ctx) as sub_ctx:
             help_text = cmd.get_help(sub_ctx)
             return f"## {name}\n\n{cmd.help or ''}\n\n```text\n{help_text}\n```\n\n"
@@ -52,6 +63,7 @@ class RSTFormatter(BaseFormatter):
         title = "CME Manual"
         return f"{'='*len(title)}\n{title}\n{'='*len(title)}\nGenerated on {date_str}\n\n"
     def format_single(self, ctx, name, cmd):
+        # Remove the incorrect get_command call that crashes on DelegatingCommand
         with click.Context(cmd, info_name=name, parent=ctx) as sub_ctx:
             help_text = cmd.get_help(sub_ctx)
             indented_help = "    " + help_text.replace("\n", "\n    ")
@@ -67,6 +79,7 @@ class GroffFormatter(BaseFormatter):
     def format_header(self, date_str):
         return f".TH CME 1 \"{date_str}\" \"CME\" \"User Commands\"\n.SH NAME\ncme \\- Custom Managed Extensions\n"
     def format_single(self, ctx, name, cmd):
+        # Remove the incorrect get_command call that crashes on DelegatingCommand
         with click.Context(cmd, info_name=name, parent=ctx) as sub_ctx:
             help_text = cmd.get_help(sub_ctx).replace("-", "\\-")
             return f".SH {name.upper()}\n{cmd.help or ''}\n.PP\n.nf\n{help_text}\n.fi\n"
@@ -134,6 +147,7 @@ def man(ctx, command_name, format):
     root_ctx = ctx.find_root()
     cli = root_ctx.command
     
+
     if command_name:
         # Look up a specific command within the group
         cmd = cli.get_command(ctx, command_name)
