@@ -23,6 +23,9 @@ logger.setLevel(getattr(logging, log_level, logging.WARNING))
 telemetry_enabled = config.get("telemetry.enabled", True)
 telemetry_path = os.path.expanduser(config.get("telemetry.path", "~/cmc_telemetry.jsonl"))
 
+if not telemetry_enabled:
+    os.environ["CLOUDMESH_AI_TELEMETRY_DISABLED"] = "true"
+
 backends = []
 if telemetry_enabled:
     backends.append(JSONFileBackend(telemetry_path))
@@ -30,4 +33,3 @@ if telemetry_enabled:
         backends.append(TextBackend())
 
 telemetry = Telemetry(command_name="cmc", backends=backends)
-

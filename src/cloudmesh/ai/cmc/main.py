@@ -236,12 +236,25 @@ def load_core_extensions(cli):
             for _, module_name, is_pkg in pkgutil.iter_modules(path):
                 full_module_name = f"{package_prefix}.{module_name}"
                 if is_pkg:
-                    # Create a group for the sub-package
+                    # Try to use the package's own register function if it exists
+                    try:
+                        pkg = importlib.import_module(full_module_name)
+                        if hasattr(pkg, 'register') and callable(pkg.register):
+                            pkg.register(current_cli)
+                            # We still need to mark it as visited to avoid loops
+                            visited.add(full_module_name)
+                            continue 
+                    except Exception as e:
+                        logger.debug(f"Could not use register function for {full_module_name}: {e}")
+
+                    # Fallback: Create a group for the sub-package and recurse
                     group = click.Group(name=module_name)
                     current_cli.add_command(group)
-                    # Recursively find commands inside this package
-                    pkg = importlib.import_module(full_module_name)
-                    register_recursive(group, pkg.__path__, full_module_name, visited)
+                    try:
+                        pkg = importlib.import_module(full_module_name)
+                        register_recursive(group, pkg.__path__, full_module_name, visited)
+                    except Exception as e:
+                        logger.error(f"Failed to recurse into {full_module_name}: {e}")
                 else:
                     try:
                         module = importlib.import_module(full_module_name)

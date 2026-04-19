@@ -2,7 +2,7 @@ import click
 import cloudmesh.ai.command.markdown as markdown_ext
 from cloudmesh.ai.cmc.utils import register_group_extensions
 
-@click.group(name="markdown")
+@click.group(name="markdown", help="Markdown utility tools for cleaning and formatting.")
 def markdown_group():
     """Markdown utility tools for cleaning and formatting."""
     pass
