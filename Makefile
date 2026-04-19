@@ -89,7 +89,7 @@ test-install: tmp-setup
 	-$(PIP) uninstall -y $(PACKAGE_NAME)
 	@echo "Installing latest version from TestPyPI..."
 	cd /tmp && pyenv exec $(PYTHON) -m pip install --no-cache-dir --upgrade --force-reinstall --ignore-installed \
-				  --index-url https://pypi.test.pypi.org/simple/ \
+				  --index-url https://test.pypi.org/simple/ \
 				  --extra-index-url https://pypi.org/simple/ \
 				  --pre $(PACKAGE_NAME)
 	@echo "\nVerification: Running '$(COMMAND_NAME) version'..."
