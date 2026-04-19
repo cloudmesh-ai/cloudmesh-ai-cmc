@@ -4,7 +4,7 @@ import csv
 import os
 from pathlib import Path
 from click.testing import CliRunner
-from cloudmesh.ai.command.command import cli
+from cloudmesh.ai.cmc.main import cli
 from cloudmesh.ai.cmc.utils import Config
 
 def test_telemetry_toggle_off():
