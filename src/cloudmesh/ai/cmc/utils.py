@@ -13,6 +13,7 @@ import sys
 import yaml
 import functools
 import traceback
+import copy
 from pathlib import Path
 from typing import Any, Dict, Optional
 from rich.console import Console
@@ -59,7 +60,7 @@ class Config:
 
     def __init__(self, config_path: Optional[Path] = None):
         self.path = config_path or self.DEFAULT_CONFIG_PATH
-        self.data = self.DEFAULTS.copy()
+        self.data = copy.deepcopy(self.DEFAULTS)
         self._load_config()
 
     def _load_config(self):

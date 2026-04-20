@@ -4,6 +4,18 @@ All notable changes to `cloudmesh-ai-cmc` will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [7.0.2.dev2] - 2026-04-19
+
+### Fixed
+- **Shell Completion**:
+    - Fixed subcommand completion falling back to filename completion.
+    - Suppressed debug logs and rogue stdout/stderr output during completion requests.
+    - Improved Zsh completion script and provided activation instructions.
+    - Added `stdin` support for completion testing.
+- **Interactive Shell**:
+    - Fixed ANSI escape codes appearing in the prompt.
+    - Updated prompt color to dark blue.
+
 ## [7.0.2.dev1] - 2026-04-19
 
 ### Added

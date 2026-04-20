@@ -9,6 +9,7 @@ import click
 import logging
 import os
 import sys
+import io
 import subprocess
 import pathlib
 import shellingham
@@ -222,6 +223,11 @@ def load_core_extensions(cli):
     Handles sub-packages by creating groups for them.
     """
     found_any = False
+    
+    # Handle namespace packages where __path__ is a list
+    paths = getattr(extensions, '__path__', [])
+    if isinstance(paths, str):
+        paths = [paths]
 
     def register_recursive(current_cli, path, package_prefix, visited=None):
         nonlocal found_any
@@ -232,21 +238,25 @@ def load_core_extensions(cli):
             return
         visited.add(package_prefix)
 
-        try:
-            for _, module_name, is_pkg in pkgutil.iter_modules(path):
-                full_module_name = f"{package_prefix}.{module_name}"
-                if is_pkg:
-                    # Try to use the package's own register function if it exists
-                    try:
-                        pkg = importlib.import_module(full_module_name)
-                        if hasattr(pkg, 'register') and callable(pkg.register):
-                            pkg.register(current_cli)
-                            # We still need to mark it as visited to avoid loops
-                            visited.add(full_module_name)
-                            continue 
-                    except Exception as e:
-                        logger.debug(f"Could not use register function for {full_module_name}: {e}")
+        # Ensure path is a list for pkgutil.iter_modules
+        search_path = path if isinstance(path, (list, tuple)) else [path]
 
+        try:
+            for _, module_name, is_pkg in pkgutil.iter_modules(search_path):
+                full_module_name = f"{package_prefix}.{module_name}"
+                logger.debug(f"Found module: {full_module_name} (pkg={is_pkg})")
+                # Try to use the module/package's own register function if it exists
+                try:
+                    mod = importlib.import_module(full_module_name)
+                    if hasattr(mod, 'register') and callable(mod.register):
+                        mod.register(current_cli)
+                        visited.add(full_module_name)
+                        found_any = True
+                        continue 
+                except Exception as e:
+                    logger.debug(f"Could not use register function for {full_module_name}: {e}")
+
+                if is_pkg:
                     # Fallback: Create a group for the sub-package and recurse
                     group = click.Group(name=module_name)
                     current_cli.add_command(group)
@@ -265,6 +275,7 @@ def load_core_extensions(cli):
                                 cmd_name = getattr(attr, 'name', module_name) or module_name
                                 # Prevent adding the group to itself
                                 if attr is not current_cli:
+                                    logger.debug(f"Adding command {cmd_name} to {current_cli}")
                                     current_cli.add_command(attr, name=cmd_name)
                                     found_any = True
                                 break
@@ -273,7 +284,8 @@ def load_core_extensions(cli):
         except Exception as e:
             logger.error(f"Failed to iterate {package_prefix}: {e}")
 
-    register_recursive(cli, extensions.__path__, "cloudmesh.ai.command")
+    for path in paths:
+        register_recursive(cli, path, "cloudmesh.ai.command")
 
     if not found_any:
         logger.warning("No core extensions found in cloudmesh.ai.command")
@@ -301,6 +313,142 @@ def load_pip_extensions(cli):
             ),
             name=entry_point.name,
         )
+
+def generate_completion_script(shell_type):
+    """Prints the shell completion script for the specified shell type."""
+    scripts = {
+        "bash_source": (
+            "_cmc() {\n"
+            "    local cur=\"${COMP_WORDS[COMP_CWORD]}\"\n"
+            "    local suggestions=$(CLICOMPLETE=1 cmc \"${COMP_WORDS[@]:1}\")\n"
+            "    COMPREPLY=( $(compgen -W \"$suggestions\" -- \"$cur\") )\n"
+            "}\n"
+            "complete -F _cmc cmc"
+        ),
+        "zsh_source": (
+            "autoload -Uz compinit && compinit\n"
+            "_cmc() {\n"
+            "    local -a opts\n"
+            "    # In Zsh completion functions, $words contains the current command line\n"
+            "    # We skip the first word (the command itself) and pass the rest to cmc\n"
+            "    # We use \"${words[2,CURRENT]}\" to get the arguments up to the cursor\n"
+            "    opts=($(CLICOMPLETE=1 cmc \"${words[2,CURRENT]}\"))\n"
+            "    compadd -a opts\n"
+            "}\n"
+            "compdef _cmc cmc"
+        ),
+        "fish_source": (
+            "complete -c cmc -f\n"
+            "complete -c cmc -a \"(CLICOMPLETE=1 cmc)\""
+        ),
+    }
+    script = scripts.get(shell_type, "")
+    print(script)
+
+def handle_completion():
+    """Manually handles shell completion requests when CLICOMPLETE=1."""
+    # Suppress all logs except WARNING/ERROR during completion to avoid 
+    # polluting the shell completion list.
+    logging.getLogger().setLevel(logging.WARNING)
+    logger.setLevel(logging.WARNING)
+
+    # Redirect both stdout and stderr to a buffer to catch any rogue 
+    # print() or logging statements during extension loading.
+    old_stdout = sys.stdout
+    old_stderr = sys.stderr
+    sys.stdout = io.StringIO()
+    sys.stderr = io.StringIO()
+    try:
+        # Ensure extensions are loaded before completing
+        load_core_extensions(cli)
+        load_pip_extensions(cli)
+    finally:
+        sys.stdout = old_stdout
+        sys.stderr = old_stderr
+    
+    args = sys.argv[1:]
+    
+    # Support reading completion arguments from stdin (e.g., cat FILE | cmc)
+    # if no arguments are provided via CLI.
+    if not args and not sys.stdin.isatty():
+        stdin_content = sys.stdin.read().strip()
+        if stdin_content:
+            # Split by whitespace to simulate argv
+            args = stdin_content.split()
+    
+    # Determine the current word being typed and the preceding context
+    if not args:
+        current_word = ""
+        context_args = []
+    elif args[-1] == "":
+        current_word = ""
+        context_args = args[:-1]
+    else:
+        current_word = args[-1]
+        context_args = args[:-1]
+
+    if not context_args:
+        # Root level completion: suggest top-level commands
+        all_commands = list(cli.commands.keys())
+        
+        # If the user has already typed a full command name (possibly with trailing space) and hit TAB,
+        # check if it's a group and suggest its subcommands instead.
+        stripped_word = current_word.rstrip()
+        if stripped_word in all_commands:
+            cmd = cli.commands.get(stripped_word)
+            # Use hasattr to avoid Click version mismatch issues with isinstance
+            if cmd and hasattr(cmd, 'commands'):
+                for sub_cmd in cmd.commands.keys():
+                    print(sub_cmd)
+                return
+
+        # Otherwise, suggest commands that start with the current word
+        # Strip trailing whitespace to allow matching (e.g., "ban " matches "banner")
+        search_word = current_word.rstrip()
+        for cmd_name in all_commands:
+            if cmd_name.startswith(search_word):
+                print(cmd_name)
+    else:
+        # Subcommand completion: suggest subcommands for the first argument
+        group_name = context_args[0]
+        group = cli.commands.get(group_name)
+        
+        # Use hasattr to avoid Click version mismatch issues with isinstance
+        if group and hasattr(group, 'commands'):
+            for sub_cmd in group.commands.keys():
+                if sub_cmd.startswith(current_word):
+                    print(sub_cmd)
+        else:
+            # If the first argument isn't a group, we can't suggest subcommands.
+            # We print nothing, which allows the shell to potentially fall back
+            # to other completion types, but we've tried our best.
+            pass
+
+
+# Check for shell completion script request at module level to ensure it's caught
+# before any other logic (like telemetry or CLI execution) runs.
+_complete_var = os.environ.get("_CME_COMPLETE")
+if _complete_var:
+    generate_completion_script(_complete_var)
+    sys.exit(0)
+
+# Check for actual completion suggestions request at module level
+if os.environ.get("CLICOMPLETE") == "1":
+    # Silence all logging immediately before doing anything else
+    logging.getLogger().setLevel(logging.WARNING)
+    # Also silence the specific cmc logger if it's already initialized
+    try:
+        logger.setLevel(logging.WARNING)
+    except Exception:
+        pass
+
+    try:
+        handle_completion()
+    except Exception as e:
+        print(f"Completion Error: {e}", file=sys.stderr)
+        import traceback
+        traceback.print_exc()
+    sys.exit(0)
 
 # Eagerly load core extensions at module level so they are visible to sphinx-click
 load_core_extensions(cli)
@@ -339,7 +487,7 @@ def alias_plugins_check(ctx):
 
 
 
-@handle_errors
+
 def main():
     # Use telemetry to track the entire execution of the cmc tool
     with telemetry.track(message="Executing CMC command"):
@@ -353,4 +501,8 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        print(f"Error: {e}")
+        sys.exit(1)

@@ -55,10 +55,10 @@ requirements:
 	pip-compile --output-file=requirements.txt pyproject.toml
 
 test:
-	pytest -v tests/
+	PYTHONPATH=src pytest -v tests/
 
 test-cov:
-	pytest --cov=cloudmesh.ai.cmc --cov-report=term-missing tests/
+	PYTHONPATH=src pytest --cov=cloudmesh.ai.cmc --cov-report=term-missing tests/
 
 setup-test:
 	$(PIP) install pytest pytest-mock pytest-cov

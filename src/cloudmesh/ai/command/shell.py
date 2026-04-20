@@ -14,7 +14,7 @@ from rich.console import Console
 from rich.panel import Panel
 
 try:
-    from prompt_toolkit import PromptSession
+    from prompt_toolkit import PromptSession, HTML
     from prompt_toolkit.history import FileHistory
     from prompt_toolkit.completion import WordCompleter
     HAS_PROMPT_TOOLKIT = True
@@ -100,26 +100,26 @@ def entry_point():
             # Update completer every loop to reflect registry changes (e.g. after 'plugins add')
             completer = get_command_completer()
             
-            # Render the prompt using Rich to get ANSI escape codes
-            with console.capture() as capture:
-                console.print("[bold cyan]cmc[/bold cyan] > ", end="")
-            prompt_ansi = capture.get()
-            
             if HAS_PROMPT_TOOLKIT:
+                # Use prompt_toolkit's HTML formatting for the prompt to avoid raw ANSI codes
+                prompt_text = HTML('<b fg="darkblue">cmc</b> > ')
+                
                 # Use prompt_toolkit for input to get history and autocomplete
-                # We pass the ANSI string as the prompt
                 user_input = session.prompt(
-                    prompt_ansi, 
+                    prompt_text, 
                     completer=completer
                 ).strip()
             else:
-                # Fallback to basic input if prompt_toolkit is missing
+                # Fallback to Rich-captured ANSI for basic input()
+                with console.capture() as capture:
+                    console.print("[bold blue]cmc[/bold blue] > ", end="")
+                prompt_ansi = capture.get()
                 user_input = input(prompt_ansi).strip()
+                
                 # If readline is available, save the input to history
                 if HAS_READLINE and user_input:
                     # Note: prompt_toolkit handles this automatically, 
                     # but for basic input() we must do it manually.
-                    # We append to the file to keep it consistent with FileHistory
                     with open(history_file, "a") as f:
                         f.write(user_input + "\n")
             
