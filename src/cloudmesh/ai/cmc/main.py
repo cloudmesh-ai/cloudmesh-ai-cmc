@@ -352,19 +352,13 @@ def handle_completion():
     logging.getLogger().setLevel(logging.WARNING)
     logger.setLevel(logging.WARNING)
 
-    # Redirect both stdout and stderr to a buffer to catch any rogue 
-    # print() or logging statements during extension loading.
-    old_stdout = sys.stdout
-    old_stderr = sys.stderr
-    sys.stdout = io.StringIO()
-    sys.stderr = io.StringIO()
     try:
         # Ensure extensions are loaded before completing
         load_core_extensions(cli)
         load_pip_extensions(cli)
-    finally:
-        sys.stdout = old_stdout
-        sys.stderr = old_stderr
+    except Exception as e:
+        # We print to stderr so it doesn't pollute the completion list
+        print(f"Error loading extensions during completion: {e}", file=sys.stderr)
     
     args = sys.argv[1:]
     

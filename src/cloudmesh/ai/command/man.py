@@ -1,5 +1,8 @@
 import click
 import sys
+import subprocess
+import tempfile
+import os
 from datetime import date
 
 # ==============================================================================
@@ -14,16 +17,21 @@ class BaseFormatter:
     def format_single(self, ctx, name, cmd): 
         # Resolve LazyCommand if necessary
         if hasattr(cmd, 'module_name') and hasattr(cmd, 'entry_point_name'):
-            # This is a LazyCommand, we need to resolve it.
-            # Since we are in a formatter, we can't easily call the group's get_command.
-            # But we can try to resolve it manually or rely on the group to have done it.
-            # Actually, the best way is to let the group handle it.
-            # If it's still a LazyCommand here, it means the group didn't resolve it.
             pass
             
         # Use the parent context or current context to avoid recursion depth issues
         with click.Context(cmd, info_name=name, parent=ctx) as sub_ctx:
-            return f"{name.upper()}\n{'-'*len(name)}\n{cmd.help or ''}\n\n{cmd.get_help(sub_ctx)}\n\n"
+            help_text = cmd.get_help(sub_ctx)
+            return (
+                f"{name.upper()}\n"
+                f"{'='*len(name)}\n\n"
+                f"DESCRIPTION\n"
+                f"-----------\n"
+                f"{cmd.help or 'No description available.'}\n\n"
+                f"USAGE\n"
+                f"-----\n"
+                f"{help_text}\n\n"
+            )
     
     def format_footer(self): 
         return ""
@@ -45,7 +53,15 @@ class HTMLFormatter(BaseFormatter):
         # Remove the incorrect get_command call that crashes on DelegatingCommand
         with click.Context(cmd, info_name=name, parent=ctx) as sub_ctx:
             help_text = cmd.get_help(sub_ctx)
-            return f"<section><h2>{name}</h2><p><strong>Description:</strong> {cmd.help or 'No description available.'}</p><pre>{help_text}</pre></section>\n"
+            return (
+                f"<section>\n"
+                f"  <h2>{name.upper()}</h2>\n"
+                f"  <h3>Description</h3>\n"
+                f"  <p>{cmd.help or 'No description available.'}</p>\n"
+                f"  <h3>Usage</h3>\n"
+                f"  <pre>{help_text}</pre>\n"
+                f"</section>\n"
+            )
     def format_footer(self):
         return "</body>\n</html>"
 
@@ -56,7 +72,13 @@ class MarkdownFormatter(BaseFormatter):
         # Remove the incorrect get_command call that crashes on DelegatingCommand
         with click.Context(cmd, info_name=name, parent=ctx) as sub_ctx:
             help_text = cmd.get_help(sub_ctx)
-            return f"## {name}\n\n{cmd.help or ''}\n\n```text\n{help_text}\n```\n\n"
+            return (
+                f"## {name.upper()}\n\n"
+                f"### Description\n"
+                f"{cmd.help or 'No description available.'}\n\n"
+                f"### Usage\n"
+                f"```text\n{help_text}\n```\n\n"
+            )
 
 class RSTFormatter(BaseFormatter):
     def format_header(self, date_str):
@@ -67,7 +89,15 @@ class RSTFormatter(BaseFormatter):
         with click.Context(cmd, info_name=name, parent=ctx) as sub_ctx:
             help_text = cmd.get_help(sub_ctx)
             indented_help = "    " + help_text.replace("\n", "\n    ")
-            return f"{name}\n{'-'*len(name)}\n\n{cmd.help or ''}\n\n::\n\n{indented_help}\n\n"
+            return (
+                f"{name.upper()}\n"
+                f"{'='*len(name)}\n\n"
+                f"**Description**\n\n"
+                f"{cmd.help or 'No description available.'}\n\n"
+                f"**Usage**\n\n"
+                f"::\n\n"
+                f"{indented_help}\n\n"
+            )
 
 class QMDFormatter(MarkdownFormatter):
     """Quarto Markdown Formatter."""
@@ -82,7 +112,17 @@ class GroffFormatter(BaseFormatter):
         # Remove the incorrect get_command call that crashes on DelegatingCommand
         with click.Context(cmd, info_name=name, parent=ctx) as sub_ctx:
             help_text = cmd.get_help(sub_ctx).replace("-", "\\-")
-            return f".SH {name.upper()}\n{cmd.help or ''}\n.PP\n.nf\n{help_text}\n.fi\n"
+            return (
+                f".SH {name.upper()}\n"
+                f".TP\n"
+                f"Description\n"
+                f"{cmd.help or 'No description available.'}\n"
+                f".TP\n"
+                f"Usage\n"
+                f".nf\n"
+                f"{help_text}\n"
+                f".fi\n"
+            )
 
 # ==============================================================================
 # LOGIC: Generator
@@ -139,8 +179,13 @@ def generate_manual(ctx, target_group, format_name="text"):
     type=click.Choice(["text", "md", "html", "rst", "qmd", "groff"], case_sensitive=False),
     help="The output format for the manual."
 )
+@click.option(
+    "--pager", 
+    is_flag=True, 
+    help="Use a system pager to display the manual."
+)
 @click.pass_context
-def man(ctx, command_name, format):
+def man(ctx, command_name, format, pager):
     """Generate a manual for all available commands."""
     
     # Ensure we have the root group to look up commands
@@ -149,17 +194,43 @@ def man(ctx, command_name, format):
     
 
     if command_name:
-        # Look up a specific command within the group
-        cmd = cli.get_command(ctx, command_name)
-        if cmd:
-            formatter = get_formatter(format)
-            header = formatter.format_header(date.today().strftime("%Y-%m-%d"))
-            content = formatter.format_single(ctx, command_name, cmd)
-            footer = formatter.format_footer()
-            click.echo(f"{header}{content}{footer}")
+        # Special case: 'cmc man cmc' should show the full manual for the root tool
+        if command_name.lower() == "cmc":
+            content = generate_manual(ctx, cli, format_name=format)
         else:
-            click.echo(f"Error: Command '{command_name}' not found.", err=True)
+            # Look up a specific command within the group
+            cmd = cli.get_command(ctx, command_name)
+            if cmd:
+                formatter = get_formatter(format)
+                header = formatter.format_header(date.today().strftime("%Y-%m-%d"))
+                content = formatter.format_single(ctx, command_name, cmd)
+                footer = formatter.format_footer()
+                content = f"{header}{content}{footer}"
+            else:
+                click.echo(f"Error: Command '{command_name}' not found.", err=True)
+                return
     else:
         # Generate the full manual
         content = generate_manual(ctx, cli, format_name=format)
+
+    if pager:
+        if format.lower() == "groff":
+            # Use system 'man' for groff format
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.1', delete=False) as tf:
+                tf.write(content)
+                temp_path = tf.name
+            try:
+                subprocess.run(["man", temp_path], check=True)
+            finally:
+                os.remove(temp_path)
+        else:
+            # Use 'less' for other formats
+            with tempfile.NamedTemporaryFile(mode='w', delete=False) as tf:
+                tf.write(content)
+                temp_path = tf.name
+            try:
+                subprocess.run(["less", temp_path], check=True)
+            finally:
+                os.remove(temp_path)
+    else:
         click.echo(content)
