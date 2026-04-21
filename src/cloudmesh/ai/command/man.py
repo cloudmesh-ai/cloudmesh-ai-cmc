@@ -19,19 +19,45 @@ class BaseFormatter:
         if hasattr(cmd, 'module_name') and hasattr(cmd, 'entry_point_name'):
             pass
             
-        # Use the parent context or current context to avoid recursion depth issues
-        with click.Context(cmd, info_name=name, parent=ctx) as sub_ctx:
+        # Extract detailed description from docstring
+        detailed_desc = ""
+        if hasattr(cmd, 'callback') and cmd.callback:
+            doc = cmd.callback.__doc__
+            if doc:
+                # Remove leading/trailing whitespace and potentially the first line if it's identical to cmd.help
+                doc = doc.strip()
+                if cmd.help and doc.startswith(cmd.help):
+                    # Extract everything after the first line
+                    lines = doc.split('\n', 1)
+                    detailed_desc = lines[1].strip() if len(lines) > 1 else ""
+                else:
+                    detailed_desc = doc
+
+        # Use a fresh context without a parent to avoid including 'man' in the usage path
+        with click.Context(cmd, info_name=name, parent=None) as sub_ctx:
             help_text = cmd.get_help(sub_ctx)
-            return (
+            
+            output = (
                 f"{name.upper()}\n"
                 f"{'='*len(name)}\n\n"
                 f"DESCRIPTION\n"
                 f"-----------\n"
                 f"{cmd.help or 'No description available.'}\n\n"
+            )
+            
+            if detailed_desc:
+                output += (
+                    f"DETAILED DESCRIPTION\n"
+                    f"--------------------\n"
+                    f"{detailed_desc}\n\n"
+                )
+                
+            output += (
                 f"USAGE\n"
                 f"-----\n"
                 f"{help_text}\n\n"
             )
+            return output
     
     def format_footer(self): 
         return ""
@@ -51,13 +77,28 @@ class HTMLFormatter(BaseFormatter):
         )
     def format_single(self, ctx, name, cmd):
         # Remove the incorrect get_command call that crashes on DelegatingCommand
-        with click.Context(cmd, info_name=name, parent=ctx) as sub_ctx:
+        detailed_desc = ""
+        if hasattr(cmd, 'callback') and cmd.callback:
+            doc = cmd.callback.__doc__
+            if doc:
+                doc = doc.strip()
+                if cmd.help and doc.startswith(cmd.help):
+                    lines = doc.split('\n', 1)
+                    detailed_desc = lines[1].strip() if len(lines) > 1 else ""
+                else:
+                    detailed_desc = doc
+
+        with click.Context(cmd, info_name=name, parent=None) as sub_ctx:
             help_text = cmd.get_help(sub_ctx)
+            
+            detailed_section = f"  <h3>Detailed Description</h3>\n  <p>{detailed_desc}</p>\n" if detailed_desc else ""
+            
             return (
                 f"<section>\n"
                 f"  <h2>{name.upper()}</h2>\n"
                 f"  <h3>Description</h3>\n"
                 f"  <p>{cmd.help or 'No description available.'}</p>\n"
+                f"{detailed_section}"
                 f"  <h3>Usage</h3>\n"
                 f"  <pre>{help_text}</pre>\n"
                 f"</section>\n"
@@ -70,12 +111,27 @@ class MarkdownFormatter(BaseFormatter):
         return f"# CME Manual\nGenerated on {date_str}\n\n---\n\n"
     def format_single(self, ctx, name, cmd):
         # Remove the incorrect get_command call that crashes on DelegatingCommand
-        with click.Context(cmd, info_name=name, parent=ctx) as sub_ctx:
+        detailed_desc = ""
+        if hasattr(cmd, 'callback') and cmd.callback:
+            doc = cmd.callback.__doc__
+            if doc:
+                doc = doc.strip()
+                if cmd.help and doc.startswith(cmd.help):
+                    lines = doc.split('\n', 1)
+                    detailed_desc = lines[1].strip() if len(lines) > 1 else ""
+                else:
+                    detailed_desc = doc
+
+        with click.Context(cmd, info_name=name, parent=None) as sub_ctx:
             help_text = cmd.get_help(sub_ctx)
+            
+            detailed_section = f"### Detailed Description\n{detailed_desc}\n\n" if detailed_desc else ""
+            
             return (
                 f"## {name.upper()}\n\n"
                 f"### Description\n"
                 f"{cmd.help or 'No description available.'}\n\n"
+                f"{detailed_section}"
                 f"### Usage\n"
                 f"```text\n{help_text}\n```\n\n"
             )
@@ -86,14 +142,29 @@ class RSTFormatter(BaseFormatter):
         return f"{'='*len(title)}\n{title}\n{'='*len(title)}\nGenerated on {date_str}\n\n"
     def format_single(self, ctx, name, cmd):
         # Remove the incorrect get_command call that crashes on DelegatingCommand
-        with click.Context(cmd, info_name=name, parent=ctx) as sub_ctx:
+        detailed_desc = ""
+        if hasattr(cmd, 'callback') and cmd.callback:
+            doc = cmd.callback.__doc__
+            if doc:
+                doc = doc.strip()
+                if cmd.help and doc.startswith(cmd.help):
+                    lines = doc.split('\n', 1)
+                    detailed_desc = lines[1].strip() if len(lines) > 1 else ""
+                else:
+                    detailed_desc = doc
+
+        with click.Context(cmd, info_name=name, parent=None) as sub_ctx:
             help_text = cmd.get_help(sub_ctx)
             indented_help = "    " + help_text.replace("\n", "\n    ")
+            
+            detailed_section = f"**Detailed Description**\n\n{detailed_desc}\n\n" if detailed_desc else ""
+            
             return (
                 f"{name.upper()}\n"
                 f"{'='*len(name)}\n\n"
                 f"**Description**\n\n"
                 f"{cmd.help or 'No description available.'}\n\n"
+                f"{detailed_section}"
                 f"**Usage**\n\n"
                 f"::\n\n"
                 f"{indented_help}\n\n"
@@ -110,13 +181,28 @@ class GroffFormatter(BaseFormatter):
         return f".TH CME 1 \"{date_str}\" \"CME\" \"User Commands\"\n.SH NAME\ncme \\- Custom Managed Extensions\n"
     def format_single(self, ctx, name, cmd):
         # Remove the incorrect get_command call that crashes on DelegatingCommand
-        with click.Context(cmd, info_name=name, parent=ctx) as sub_ctx:
+        detailed_desc = ""
+        if hasattr(cmd, 'callback') and cmd.callback:
+            doc = cmd.callback.__doc__
+            if doc:
+                doc = doc.strip()
+                if cmd.help and doc.startswith(cmd.help):
+                    lines = doc.split('\n', 1)
+                    detailed_desc = lines[1].strip() if len(lines) > 1 else ""
+                else:
+                    detailed_desc = doc
+
+        with click.Context(cmd, info_name=name, parent=None) as sub_ctx:
             help_text = cmd.get_help(sub_ctx).replace("-", "\\-")
+            
+            detailed_section = f".TP\nDetailed Description\n{detailed_desc}\n" if detailed_desc else ""
+            
             return (
                 f".SH {name.upper()}\n"
                 f".TP\n"
                 f"Description\n"
                 f"{cmd.help or 'No description available.'}\n"
+                f"{detailed_section}"
                 f".TP\n"
                 f"Usage\n"
                 f".nf\n"

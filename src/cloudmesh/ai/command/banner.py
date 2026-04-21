@@ -1,47 +1,50 @@
 import click
+import io
 
 from rich.console import Console
+from rich.panel import Panel
+from rich.box import ROUNDED
 
-# Initialize a global Rich console
-# This automatically handles terminal detection and color support
-console = Console()
-
+from cloudmesh.ai.common.io import banner as banner_func
 
 
 @click.command()
-@click.option("--char", "-c", default="#", help="The character to use")
-@click.option("--width", "-n", default=70, type=int, help="The width of the banner")
-@click.option("--indent", "-i", default=0, type=int, help="The indentation")
-@click.option(
-    "--color",
-    "-r",
-    default="black",
-    help="Color name or hex (e.g., 'red', 'blue', '#ff00ff')",
-)
+@click.option("--char", "-c", is_flag=True, default=False, help="Prefix each line with #")
+@click.option("--comment-char", default="#", help="Character to use for comments when -c is used")
 @click.argument("text", nargs=-1, required=True)
-def banner(char, width, indent, color, text):
+def banner(char, comment_char, text):
     """
-    A simple command to print a text banner with customizable character,
-    width, and color.
+    A simple command to print a text banner using the professional 
+    cloudmesh-ai common panel.
     """
-    message = " ".join(text)
-    
-    # Calculate padding for centering
-    padding = (width - len(message) - 2) // 2
-    if padding < 0: padding = 0
-    
-    # Construction of parts
-    line = char * width
-    centered_text = f"{char}{' ' * padding}{message}{' ' * (width - len(message) - padding - 2)}{char}"
-    
-    # Indentation
-    ind = " " * indent
-    
-    # Printing with Rich (using the console and style)
-    style = f"bold {color}"
-    console.print(f"{ind}{line}", style=style)
-    console.print(f"{ind}{centered_text}", style=style)
-    console.print(f"{ind}{line}", style=style)
+    if len(text) == 1:
+        # Only one argument: use it as content, title is empty
+        panel = banner_func("", text[0])
+    else:
+        # Multiple arguments: first is title, rest is content
+        title = text[0]
+        content = "\n".join(text[1:])
+        panel = banner_func(title, content)
+
+    if char:
+        # Capture the rendered panel to a string to add the prefix
+        # We subtract the length of the comment character from the terminal width
+        # so that the final result (prefix + panel) fills exactly 100% of the terminal.
+        term_width = Console().width
+        adjusted_width = term_width - len(comment_char)
+        console_buffer = Console(file=io.StringIO(), width=adjusted_width, force_terminal=False)
+        console_buffer.print(panel)
+        rendered_text = console_buffer.file.getvalue()
+        
+        # Prefix each line with the comment character
+        lines = rendered_text.splitlines()
+        prefixed_lines = [f"{comment_char}{line}" for line in lines]
+        
+        # Print the final result using the standard console
+        Console().print("\n".join(prefixed_lines))
+    else:
+        # Just print the panel normally
+        Console().print(panel)
 
 def register(cli):
     cli.add_command(banner, name="banner")
