@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - **Interactive Shell**:
     - Fixed ANSI escape codes appearing in the prompt.
     - Updated prompt color to dark blue.
+- **Progress Command**: Fixed `TypeError` by casting progress value to string and corrected keyword arguments for `progress` and `time`.
 
 ## [7.0.2.dev1] - 2026-04-19
 

@@ -1,0 +1,6 @@
+# cloudmesh status=running progress=0 pid=71035
+ now=False sep=  banner=False key_values=()# cloudmesh status=running progress=0 pid=71035
+ now=True sep=  banner=False key_values=()# cloudmesh status=undefined progress=0 pid=71035
+ now=False sep=  banner=False key_values=()# cloudmesh status=running progress=0 pid=71035
+ now=False sep=  banner=False key_values=('a=10', 'b=text', 'c={d:1}')# cloudmesh status=running progress=0 pid=71035
+ now=False sep=  banner=True key_values=('a=10',)
