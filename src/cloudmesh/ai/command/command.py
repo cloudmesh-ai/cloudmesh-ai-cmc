@@ -1,15 +1,11 @@
 import click
 import sys
 import inspect
-from rich.console import Console
-from rich.table import Table
-from rich import box
+from cloudmesh.ai.common.io import console
 from cloudmesh.ai.command.man import generate_manual, get_formatter
 import os
 from pathlib import Path
 import re
-
-console = Console()
 
 # ==============================================================================
 # COMMAND DEFINITIONS
@@ -29,7 +25,7 @@ def cmd_load(directory, name):
     registry.register(name, directory)
     # Derive the name if not provided for the output message
     display_name = name or os.path.basename(os.path.abspath(directory))
-    click.echo(f"Loaded and activated: {display_name}")
+    console.ok(f"Loaded and activated: {display_name}")
 
 
 @click.command(name="activate")
@@ -39,9 +35,9 @@ def cmd_activate(name):
     from cloudmesh.ai.cmc.main import registry
 
     if registry.set_status(name, True):
-        click.echo(f"Activated: {name}")
+        console.ok(f"Activated: {name}")
     else:
-        click.echo(f"Error: {name} not found in registry.")
+        console.error(f"{name} not found in registry.")
 
 
 @click.command(name="deactivate")
@@ -51,9 +47,9 @@ def cmd_deactivate(name):
     from cloudmesh.ai.cmc.main import registry
 
     if registry.set_status(name, False):
-        click.echo(f"Deactivated: {name}")
+        console.ok(f"Deactivated: {name}")
     else:
-        click.echo(f"Error: {name} not found in registry.")
+        console.error(f"{name} not found in registry.")
 
 
 @click.command(name="list")
@@ -64,26 +60,14 @@ def cmd_list():
     details = registry.list_all_details()
 
     if not details:
-        console.print("[yellow]Registry is empty.[/yellow]")
+        console.warning("Registry is empty.")
         return
 
-    table = Table(
-        title="CME Command Registry",
-        show_header=True,
-        header_style="bold magenta",
-        box=box.ROUNDED,
-    )
-
-    table.add_column("COMMAND", style="blue", width=30)
-    table.add_column("VERSION", style="dim")
-    table.add_column("STATUS", justify="center")
-    table.add_column("SOURCE PATH", style="black")
-
-    for item in details:
-        status = "[green]active[/green]" if item["active"] else "[red]inactive[/red]"
-        table.add_row(item["name"], item["version"], status, item["path"])
-
-    console.print(table)
+    data = [
+        (item["name"], item["version"], "[green]active[/green]" if item["active"] else "[red]inactive[/red]", item["path"])
+        for item in details
+    ]
+    console.table(["COMMAND", "VERSION", "STATUS", "SOURCE PATH"], data, title="CME Command Registry")
 
 
 @click.command(name="unload")
@@ -93,7 +77,7 @@ def cmd_unload(name):
     from cloudmesh.ai.cmc.main import registry
 
     registry.unregister(name)
-    click.echo(f"Unloaded: {name}")
+    console.ok(f"Unloaded: {name}")
 
 
 @click.command(name="create")
@@ -119,7 +103,7 @@ def cmd_create(name, groups, path):
     plugin_file = target_dir / "src" / "cloudmesh" / "ai" / "command" / f"{root_name}.py"
 
     if target_dir.exists():
-        console.print(f"\n[bold red]WARNING: the command '{root_name}' in the directory '{target_dir.name}' already exists.[/bold red]\n")
+        console.warning(f"The command '{root_name}' in the directory '{target_dir.name}' already exists.")
         if click.confirm("Do you want to erase it and create a new one?", default=False):
             import shutil
             shutil.rmtree(target_dir)
@@ -133,7 +117,7 @@ def cmd_create(name, groups, path):
 
             for sub in all_subs:
                 if sub in existing_cmds:
-                    console.print(f"[yellow]Warning: '{sub}' already exists. Skipping.[/yellow]")
+                    console.warning(f"'{sub}' already exists. Skipping.")
                 else:
                     code = f'\n\n@{root_name}_group.command(name="{sub}")\ndef {sub}_cmd():\n    """{sub} command added via CMC."""\n    console.print("[bold green]Hello from {root_name} {sub}![/bold green]")\n'
                     new_additions_code.append(code)
@@ -142,12 +126,12 @@ def cmd_create(name, groups, path):
             if not added_names:
                 return
 
-            if "def register(cli):" in content:
-                parts = content.split("def register(cli):")
-                new_content = parts[0] + "".join(new_additions_code) + "def register(cli):" + parts[1]
-                plugin_file.write_text(new_content)
-                console.print(f"[green]Updated extension {root_name} with {added_names}[/green]")
-            return
+                if "def register(cli):" in content:
+                    parts = content.split("def register(cli):")
+                    new_content = parts[0] + "".join(new_additions_code) + "def register(cli):" + parts[1]
+                    plugin_file.write_text(new_content)
+                    console.ok(f"Updated extension {root_name} with {added_names}")
+                return
 
     try:
         command_dir = target_dir / "src" / "cloudmesh" / "ai" / "command"
@@ -163,35 +147,36 @@ def cmd_create(name, groups, path):
             root_name=root_name, commands_code="".join(commands_code_list)
         )
 
-        console.print("\nCreating:")
-        # Use relative path for the directory display
+        # Collect created files for the banner
+        created_files = []
         try:
             rel_target = target_dir.relative_to(Path.cwd())
-            console.print(f"./{rel_target}/")
+            created_files.append(f"./{rel_target}/")
         except ValueError:
-            console.print(f"{target_dir}/")
+            created_files.append(f"{target_dir}/")
 
         (target_dir / "VERSION").write_text("0.1.0")
-        console.print("    - VERSION")
+        created_files.append("    - VERSION")
 
         (target_dir / "pyproject.toml").write_text(pyproject_content)
-        console.print("    - pyproject.toml")
+        created_files.append("    - pyproject.toml")
 
         plugin_file.write_text(plugin_content)
-        console.print(f"    - {plugin_file.relative_to(target_dir)}")
+        created_files.append(f"    - {plugin_file.relative_to(target_dir)}")
         
         # Write additional templates
         if (templates_dir / "Makefile").exists():
             (target_dir / "Makefile").write_text((templates_dir / "Makefile").read_text().format(name=root_name))
-            console.print("    - Makefile")
+            created_files.append("    - Makefile")
         if (templates_dir / "LICENSE.tmpl").exists():
             (target_dir / "LICENSE").write_text((templates_dir / "LICENSE.tmpl").read_text())
-            console.print("    - LICENSE")
+            created_files.append("    - LICENSE")
             
-        console.print(f"\n[green]Created new command at {target_dir}[/green]")
+        console.banner("Extension Created", "\n".join(created_files))
+        console.ok(f"Created new command at {target_dir}")
 
     except Exception as e:
-        console.print(f"[red]Failed to create extension: {e}[/red]")
+        console.error(f"Failed to create extension: {e}")
 
 
 @click.command(name="man")
@@ -228,14 +213,14 @@ def cmd_man(ctx, all, format, command_name):
         cmd = root_cli.get_command(ctx, command_name)
         if cmd:
             formatter = get_formatter(format)
-            click.echo(formatter.format_single(ctx, command_name, cmd))
+            console.print(formatter.format_single(ctx, command_name, cmd))
             ctx.exit()
         else:
-            click.echo(f"Error: Command '{command_name}' not found.")
+            console.error(f"Command '{command_name}' not found.")
             sys.exit(1)
 
     # If nothing specific requested, show the help for 'man'
-    click.echo(ctx.get_help())
+    console.print(ctx.get_help())
 
 
 # ==============================================================================

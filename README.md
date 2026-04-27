@@ -85,10 +85,27 @@ Commands:
 
 ## Installation
 
-Install the framework in your environment:
+### Recommended: Using pipx
+For the best experience with CLI tools, use `pipx` to install `cloudmesh-ai-cmc` in an isolated environment. This prevents dependency conflicts and automatically adds the `cmc` command to your PATH.
 
 ``` bash
-cd cloudmesh-ai-cmc
+pipx install cloudmesh-ai-cmc
+```
+
+To install from a local directory:
+``` bash
+pipx install .
+```
+
+### Using pip
+If you prefer a standard installation in your current environment:
+
+``` bash
+pip install cloudmesh-ai-cmc
+```
+
+To install from a local directory:
+``` bash
 pip install .
 ```
 
