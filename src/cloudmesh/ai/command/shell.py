@@ -77,8 +77,8 @@ def entry_point():
     """Enter an interactive shell for CMC commands."""
     console.print(Panel("[bold blue]CMC Interactive Shell[/bold blue]\nType 'exit' or 'quit' to leave, or 'help' for commands."))
     
-    # History file path: ~/.config/cloudmesh/ai/cmc_history
-    history_dir = Path("~/.config/cloudmesh/ai").expanduser()
+    # History file path: ~/.config/cloudmesh/cmc_history
+    history_dir = Path("~/.config/cloudmesh").expanduser()
     history_dir.mkdir(parents=True, exist_ok=True)
     history_file = history_dir / "cmc_history"
     

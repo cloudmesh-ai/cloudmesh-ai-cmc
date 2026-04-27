@@ -38,7 +38,7 @@ logger = ai_log.get_logger("cmc.utils")
 class Config:
     """Handles configuration for CMC from a YAML file."""
     
-    DEFAULT_CONFIG_PATH = Path("~/.config/cloudmesh/ai/cmc.yaml").expanduser()
+    DEFAULT_CONFIG_PATH = Path("~/.config/cloudmesh/cmc.yaml").expanduser()
     
     DEFAULTS = {
         "telemetry": {
