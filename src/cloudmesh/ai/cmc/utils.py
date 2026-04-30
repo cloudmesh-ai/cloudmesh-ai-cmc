@@ -59,11 +59,18 @@ class Config:
     }
 
     def __init__(self, config_path: Optional[Path] = None):
+        """Initializes the Config object.
+
+        Args:
+            config_path (Optional[Path]): Path to the configuration file. 
+                Defaults to DEFAULT_CONFIG_PATH if not provided.
+        """
         self.path = config_path or self.DEFAULT_CONFIG_PATH
         self.data = copy.deepcopy(self.DEFAULTS)
         self._load_config()
 
     def _load_config(self):
+        """Loads configuration from the YAML file on disk and updates defaults."""
         if self.path.exists():
             try:
                 with open(self.path, "r") as f:
@@ -74,6 +81,12 @@ class Config:
                 logger.warning(f"Could not load config file {self.path}: {e}")
 
     def _deep_update(self, base: Dict, update: Dict):
+        """Recursively updates a dictionary.
+
+        Args:
+            base (Dict): The dictionary to be updated.
+            update (Dict): The dictionary containing updates to apply.
+        """
         for k, v in update.items():
             if isinstance(v, dict) and k in base and isinstance(base[k], dict):
                 self._deep_update(base[k], v)
@@ -81,8 +94,17 @@ class Config:
                 base[k] = v
 
     def get(self, key_path: str, default: Any = None) -> Any:
-        """Get a value from the config using a dot-separated path (e.g., 'telemetry.enabled').
-        Environment variables can override config values (e.g., 'telemetry.path' -> 'CMC_TELEMETRY_PATH').
+        """Gets a value from the config using a dot-separated path.
+
+        Environment variables can override config values. For example, 
+        'telemetry.path' can be overridden by 'CMC_TELEMETRY_PATH'.
+
+        Args:
+            key_path (str): Dot-separated path to the configuration value.
+            default (Any, optional): Value to return if the key is not found. Defaults to None.
+
+        Returns:
+            Any: The configuration value or the default value.
         """
         # 1. Check for environment variable override
         env_var = f"CMC_{key_path.replace('.', '_').upper()}"
@@ -111,7 +133,15 @@ class Config:
             return default
 
     def validate(self, key_path: str, value: Any):
-        """Validates a configuration value against the schema if it exists."""
+        """Validates a configuration value against the schema if it exists.
+
+        Args:
+            key_path (str): Dot-separated path to the configuration value.
+            value (Any): The value to validate.
+
+        Raises:
+            TypeError: If the value does not match the expected type in the schema.
+        """
         if key_path in self.SCHEMA:
             expected_type = self.SCHEMA[key_path]["type"]
             if not isinstance(value, expected_type):
@@ -119,7 +149,12 @@ class Config:
         # If not in SCHEMA, we allow it (dynamic plugin configuration)
 
     def set(self, key_path: str, value: Any):
-        """Set a value in the config using a dot-separated path (e.g., 'telemetry.enabled')."""
+        """Sets a value in the config using a dot-separated path.
+
+        Args:
+            key_path (str): Dot-separated path to the configuration value.
+            value (Any): The value to set.
+        """
         self.validate(key_path, value)
         keys = key_path.split(".")
         val = self.data
@@ -130,7 +165,11 @@ class Config:
         val[keys[-1]] = value
 
     def save(self):
-        """Saves the current configuration to the YAML file."""
+        """Saves the current configuration to the YAML file.
+
+        Raises:
+            Exception: If the configuration file cannot be saved.
+        """
         try:
             self.path.parent.mkdir(parents=True, exist_ok=True)
             with open(self.path, "w") as f:
@@ -140,9 +179,16 @@ class Config:
             raise
 
 def handle_errors(func):
-    """
-    Decorator to provide standardized error handling for CMC commands.
-    Logs full traceback, emits telemetry failure, and shows clean error to user.
+    """Decorator to provide standardized error handling for CMC commands.
+
+    Logs the full traceback for developers, emits a telemetry failure if 
+    available, and displays a clean, user-friendly error message.
+
+    Args:
+        func (Callable): The function to be wrapped.
+
+    Returns:
+        Callable: The wrapped function.
     """
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
@@ -174,9 +220,13 @@ def handle_errors(func):
     return wrapper
 
 def register_group_extensions(parent_group, group_package, child_target=None):
-    """
-    Generic helper to iteratively load all modules in a package
-    and call their register() function.
+    """Iteratively loads all modules in a package and calls their register() function.
+
+    Args:
+        parent_group (Any): The parent group to register extensions to.
+        group_package (Module): The package containing the extension modules.
+        child_target (Any, optional): An alternative target for registration. 
+            Defaults to parent_group if not provided.
     """
     target = child_target or parent_group
 

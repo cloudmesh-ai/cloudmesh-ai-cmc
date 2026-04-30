@@ -5,6 +5,18 @@
 # You may obtain a copy of the License at
 #
 #     http://www.apache.org/licenses/LICENSE-2.0
+
+"""CMC Context Initialization.
+
+This module initializes the global state for the Cloudmesh AI CMC application,
+including configuration loading, logging setup, and telemetry initialization.
+
+Global Objects:
+    config (Config): The application configuration object.
+    logger (Logger): The main application logger.
+    telemetry (Telemetry): The telemetry collection object.
+"""
+
 import os
 import logging
 from cloudmesh.ai.common import logging as ai_log

@@ -35,31 +35,75 @@ from dataclasses import dataclass
 
 @dataclass
 class LazyCommand:
+    """Represents a command that is loaded lazily from a module.
+
+    Attributes:
+        name (str): The name of the command.
+        module_name (str): The name of the module containing the command.
+        entry_point_name (str): The name of the entry point function/object in the module.
+        hidden (bool): Whether the command should be hidden from help output. Defaults to False.
+    """
     name: str
     module_name: str
     entry_point_name: str
     hidden: bool = False
 
     def get_short_help_str(self, limit=None):
+        """Returns a short help string for the lazy-loaded command.
+
+        Args:
+            limit (int, optional): Maximum length of the help string. Defaults to None.
+
+        Returns:
+            str: A short description of the command.
+        """
         return "Lazy-loaded extension"
 
 from cloudmesh.ai.cmc.context import config, logger, telemetry
 
 
 class DelegatingCommand(click.Group):
-    """A command that delegates execution to another click object (e.g., a Group from a different click version)."""
+    """A command that delegates execution to another click object.
+
+    This is used to handle cases where a command is loaded from a different 
+    Click version or instance, preventing version mismatch errors.
+    """
     def __init__(self, name, delegate, **kwargs):
+        """Initializes the DelegatingCommand.
+
+        Args:
+            name (str): The name of the command.
+            delegate (Any): The actual click object or factory to delegate to.
+            **kwargs: Additional arguments passed to the click.Group constructor.
+        """
         # For a Group, ignore_unknown_options is a valid argument in many click versions
         # If it still fails, we can remove it and try another way.
         super().__init__(name, **kwargs)
         self.delegate = delegate
 
     def get_command(self, ctx, name):
+        """Overrides get_command to prevent Click from searching for subcommands.
+
+        Args:
+            ctx (click.Context): The Click context.
+            name (str): The name of the command to retrieve.
+
+        Returns:
+            None: Always returns None to let invoke() handle the arguments.
+        """
         # Return None so that click doesn't try to find a subcommand within this group
         # and instead lets the invoke() method handle the arguments.
         return None
 
     def invoke(self, ctx):
+        """Invokes the delegate object with the provided context.
+
+        Args:
+            ctx (click.Context): The Click context containing the arguments.
+
+        Raises:
+            RuntimeError: If the delegate cannot be resolved or is not callable.
+        """
         # We manually call the delegate's main method with the remaining arguments
         # This bypasses the need for the delegate to be a 'core' click object
         try:
@@ -103,10 +147,22 @@ class DelegatingCommand(click.Group):
             sys.exit(1)
 
 class SubcommandHelpGroup(click.Group):
-    """Custom Click Group to show subcommands in help output with dynamic width."""
+    """Custom Click Group to show subcommands in help output with dynamic width.
+
+    This group overrides the default command retrieval and formatting to support
+    lazy loading of extensions and to ensure help text utilizes the full terminal width.
+    """
 
     def get_command(self, ctx, name):
-        """Override to support lazy loading of extensions."""
+        """Retrieves a command, supporting lazy loading of extensions.
+
+        Args:
+            ctx (click.Context): The Click context.
+            name (str): The name of the command to retrieve.
+
+        Returns:
+            click.Command: The loaded command, or None if not found.
+        """
         logger.debug(f"get_command called for {name}")
         cmd = super().get_command(ctx, name)
         logger.debug(f"initial cmd type for {name}: {type(cmd)}")
@@ -153,9 +209,14 @@ class SubcommandHelpGroup(click.Group):
         return cmd
 
     def format_commands(self, ctx, formatter):
-        """
-        Overwrites the default command formatting to ensure help text
-        is not prematurely truncated and utilizes the full terminal width.
+        """Overwrites the default command formatting for full terminal width.
+
+        Ensures that help text is not prematurely truncated by syncing the 
+        formatter width with the actual terminal size.
+
+        Args:
+            ctx (click.Context): The Click context.
+            formatter (click.helpers.HelpFormatter): The formatter to use.
         """
         # 1. Sync formatter width with actual terminal width
         term_width, _ = shutil.get_terminal_size()
@@ -195,17 +256,24 @@ class SubcommandHelpGroup(click.Group):
 # Use standard click.Group during Sphinx builds to avoid issues with SubcommandHelpGroup
 if os.getenv("SPHINX_BUILD") == "1":
     @click.group()
-    @click.option("--debug", is_flag=True, help="Enable debug logging.")
+    @click.option("-v", "--debug", is_flag=True, help="Enable debug logging.")
     @click.pass_context
     def cli(ctx, debug):
         """cmc: Cloudmesh Commands."""
         pass
 else:
     @click.group(cls=SubcommandHelpGroup)
-    @click.option("--debug", is_flag=True, help="Enable debug logging.")
+    @click.option("-v", "--debug", is_flag=True, help="Enable debug logging.")
     @click.pass_context
     def cli(ctx, debug):
-        """cmc: Cloudmesh Commands."""
+        """cmc: Cloudmesh Commands.
+
+        The main entry point for the Cloudmesh AI CMC tool.
+
+        Args:
+            ctx (click.Context): The Click context.
+            debug (bool): Whether to enable debug logging.
+        """
         if debug:
             logger.setLevel(logging.DEBUG)
             logger.debug("Debug logging enabled")
@@ -218,9 +286,13 @@ else:
 
 
 def load_core_extensions(cli):
-    """
-    Recursively iterates through the command directory and adds all click commands found.
-    Handles sub-packages by creating groups for them.
+    """Recursively loads all core extensions from the command directory.
+
+    Iterates through the `cloudmesh.ai.command` package and adds any found 
+    Click commands or groups to the provided CLI object.
+
+    Args:
+        cli (click.Group): The main CLI group to which extensions are added.
     """
     found_any = False
     
@@ -292,8 +364,13 @@ def load_core_extensions(cli):
 
 
 def load_pip_extensions(cli):
-    """
-    Loads extensions installed via pip using entry points lazily.
+    """Loads extensions installed via pip using entry points lazily.
+
+    Searches for entry points in the 'cloudmesh.ai.command' group and adds 
+    them as LazyCommand objects to the CLI.
+
+    Args:
+        cli (click.Group): The main CLI group to which extensions are added.
     """
     eps = entry_points().select(group="cloudmesh.ai.command")
     for entry_point in eps:
@@ -315,7 +392,11 @@ def load_pip_extensions(cli):
         )
 
 def generate_completion_script(shell_type):
-    """Prints the shell completion script for the specified shell type."""
+    """Prints the shell completion script for the specified shell type.
+
+    Args:
+        shell_type (str): The type of shell (e.g., 'bash_source', 'zsh_source', 'fish_source').
+    """
     scripts = {
         "bash_source": (
             "_cmc() {\n"
@@ -346,7 +427,12 @@ def generate_completion_script(shell_type):
     print(script)
 
 def handle_completion():
-    """Manually handles shell completion requests when CLICOMPLETE=1."""
+    """Manually handles shell completion requests.
+
+    This function is called when the environment variable CLICOMPLETE=1 is set.
+    It determines the current word being typed and suggests matching commands 
+    or subcommands.
+    """
     # Suppress all logs except WARNING/ERROR during completion to avoid 
     # polluting the shell completion list.
     logging.getLogger().setLevel(logging.WARNING)
@@ -451,19 +537,31 @@ load_core_extensions(cli)
 @cli.command(name="v", hidden=True)
 @click.pass_context
 def alias_version(ctx):
-    """Alias for version."""
+    """Alias for version.
+
+    Args:
+        ctx (click.Context): The Click context.
+    """
     ctx.invoke(cli.get_command("version"))
 
 @cli.command(name="tel", hidden=True)
 @click.pass_context
 def alias_telemetry(ctx):
-    """Alias for telemetry."""
+    """Alias for telemetry.
+
+    Args:
+        ctx (click.Context): The Click context.
+    """
     ctx.invoke(cli.get_command("telemetry"))
 
 @cli.command(name="pl", hidden=True)
 @click.pass_context
 def alias_plugins_list(ctx):
-    """Alias for plugins list."""
+    """Alias for plugins list.
+
+    Args:
+        ctx (click.Context): The Click context.
+    """
     plugins_group = cli.get_command("plugins")
     if plugins_group:
         ctx.invoke(plugins_group.get_command("list"))
@@ -471,7 +569,11 @@ def alias_plugins_list(ctx):
 @cli.command(name="pch", hidden=True)
 @click.pass_context
 def alias_plugins_check(ctx):
-    """Alias for plugins check."""
+    """Alias for plugins check.
+
+    Args:
+        ctx (click.Context): The Click context.
+    """
     plugins_group = cli.get_command("plugins")
     if plugins_group:
         ctx.invoke(plugins_group.get_command("check"))
@@ -483,6 +585,10 @@ def alias_plugins_check(ctx):
 
 
 def main():
+    """Main entry point for the CMC application.
+
+    Initializes pip extensions and invokes the Click CLI.
+    """
     # Use telemetry to track the entire execution of the cmc tool
     with telemetry.track(message="Executing CMC command"):
         logger.debug("CMC main() is executing")
