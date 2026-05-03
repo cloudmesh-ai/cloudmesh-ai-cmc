@@ -88,7 +88,7 @@ def cmd_unload(name):
 @click.option("--path", "-p", default=".", help="Path to create the command in.")
 def cmd_create(name, groups, path):
     """
-    Create or expand a CMC command.
+    Create or expand a CMC command using the example template.
     """
     root_name = name
     all_subs = list(groups)
@@ -96,8 +96,8 @@ def cmd_create(name, groups, path):
     if not all_subs:
         all_subs = [root_name]
 
-    current_dir = Path(__file__).parent
-    templates_dir = current_dir.parent / "cmc" / "templates"
+    # Template source
+    example_dir = Path("/Users/grey/work/cloudmesh-ai-example")
     base_dir = Path(path).expanduser().resolve()
     target_dir = base_dir / f"cloudmesh-ai-{root_name}"
     plugin_file = target_dir / "src" / "cloudmesh" / "ai" / "command" / f"{root_name}.py"
@@ -126,26 +126,49 @@ def cmd_create(name, groups, path):
             if not added_names:
                 return
 
-                if "def register(cli):" in content:
-                    parts = content.split("def register(cli):")
-                    new_content = parts[0] + "".join(new_additions_code) + "def register(cli):" + parts[1]
-                    plugin_file.write_text(new_content)
-                    console.ok(f"Updated extension {root_name} with {added_names}")
-                return
+            if "def register(cli):" in content:
+                parts = content.split("def register(cli):")
+                new_content = parts[0] + "".join(new_additions_code) + "def register(cli):" + parts[1]
+                plugin_file.write_text(new_content)
+                console.ok(f"Updated extension {root_name} with {added_names}")
+            return
 
     try:
-        command_dir = target_dir / "src" / "cloudmesh" / "ai" / "command"
-        command_dir.mkdir(parents=True, exist_ok=True)
+        import shutil
+        # Copy the example template
+        shutil.copytree(example_dir, target_dir)
 
-        commands_code_list = [
-            f'\n\n@{root_name}_group.command(name="{sub}")\ndef {sub}_cmd():\n    """{sub} created by CMC."""\n    console.print("[bold green]Hello from {root_name} {sub}![/bold green]")\n'
-            for sub in all_subs
-        ]
+        # Replace placeholders in all files and rename files
+        # We collect paths first to avoid issues with modifying the directory tree while iterating
+        for file_path in list(target_dir.rglob("*")):
+            if file_path.is_file():
+                # Replace content
+                content = file_path.read_text(errors="ignore")
+                new_content = content.replace("{{name}}", root_name)
+                file_path.write_text(new_content, encoding="utf-8")
+                
+                # Rename file if it contains placeholder
+                if "{{name}}" in file_path.name:
+                    new_name = file_path.name.replace("{{name}}", root_name)
+                    file_path.rename(file_path.with_name(new_name))
 
-        pyproject_content = (templates_dir / "pyproject.toml.tmpl").read_text().format(name=root_name)
-        plugin_content = (templates_dir / "plugin.py.tmpl").read_text().format(
-            root_name=root_name, commands_code="".join(commands_code_list)
-        )
+        # Handle sub-commands (groups) in the plugin file
+        plugin_content = plugin_file.read_text()
+        
+        if all_subs != [root_name]:
+            # Remove the default 'hello' command if we have specific groups
+            plugin_content = re.sub(r'@\w+_group\.command\(name="hello"\).*?def hello_cmd\(\):.*?console\.ok\(.*?\)', '', plugin_content, flags=re.DOTALL)
+            
+            commands_code_list = [
+                f'\n\n@{root_name}_group.command(name="{sub}")\ndef {sub}_cmd():\n    """{sub} created by CMC."""\n    console.print("[bold green]Hello from {root_name} {sub}![/bold green]")\n'
+                for sub in all_subs
+            ]
+            
+            if "def register(cli):" in plugin_content:
+                parts = plugin_content.split("def register(cli):")
+                plugin_content = parts[0] + "".join(commands_code_list) + "def register(cli):" + parts[1]
+            
+            plugin_file.write_text(plugin_content)
 
         # Collect created files for the banner
         created_files = []
@@ -155,26 +178,12 @@ def cmd_create(name, groups, path):
         except ValueError:
             created_files.append(f"{target_dir}/")
 
-        (target_dir / "VERSION").write_text("0.1.0")
-        created_files.append("    - VERSION")
+        for file in target_dir.rglob("*"):
+            if file.is_file():
+                created_files.append(f"    - {file.relative_to(target_dir)}")
 
-        (target_dir / "pyproject.toml").write_text(pyproject_content)
-        created_files.append("    - pyproject.toml")
-
-        plugin_file.write_text(plugin_content)
-        created_files.append(f"    - {plugin_file.relative_to(target_dir)}")
-        
-        # Write additional templates
-        if (templates_dir / "Makefile").exists():
-            (target_dir / "Makefile").write_text((templates_dir / "Makefile").read_text().format(name=root_name))
-            created_files.append("    - Makefile")
-        if (templates_dir / "LICENSE.tmpl").exists():
-            (target_dir / "LICENSE").write_text((templates_dir / "LICENSE.tmpl").read_text())
-            created_files.append("    - LICENSE")
-            
         console.banner("Extension Created", "\n".join(created_files))
         console.ok(f"Created new command at {target_dir}")
-
     except Exception as e:
         console.error(f"Failed to create extension: {e}")
 
