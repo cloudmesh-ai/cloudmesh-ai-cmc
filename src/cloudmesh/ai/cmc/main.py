@@ -82,17 +82,17 @@ class DelegatingCommand(click.Group):
         self.delegate = delegate
 
     def get_command(self, ctx, name):
-        """Overrides get_command to prevent Click from searching for subcommands.
+        """Overrides get_command to delegate subcommand retrieval to the delegate.
 
         Args:
             ctx (click.Context): The Click context.
             name (str): The name of the command to retrieve.
 
         Returns:
-            None: Always returns None to let invoke() handle the arguments.
+            click.Command: The retrieved command from the delegate, or None.
         """
-        # Return None so that click doesn't try to find a subcommand within this group
-        # and instead lets the invoke() method handle the arguments.
+        if hasattr(self.delegate, 'get_command'):
+            return self.delegate.get_command(ctx, name)
         return None
 
     def invoke(self, ctx):
