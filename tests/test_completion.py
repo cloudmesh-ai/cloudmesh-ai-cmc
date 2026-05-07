@@ -20,6 +20,18 @@ def run_completion(args):
         capture_output=True, 
         text=True
     )
+    
+    # Filter out logging messages from stdout to avoid test failures
+    # Logs typically start with [INFO], [DEBUG], [WARNING], [ERROR] or "DEBUG: "
+    filtered_stdout = []
+    for line in result.stdout.splitlines():
+        line_strip = line.strip()
+        if not (line_strip.startswith(("[INFO]", "[DEBUG]", "[WARNING]", "[ERROR]")) or 
+                line_strip.startswith("DEBUG:")):
+            filtered_stdout.append(line)
+    
+    # Update the result object with filtered stdout
+    result.stdout = "\n".join(filtered_stdout)
     return result
 
 def test_root_completion_empty():

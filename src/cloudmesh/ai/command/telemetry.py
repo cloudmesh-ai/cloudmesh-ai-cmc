@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import List, Dict, Any
 
 from cloudmesh.ai.cmc.utils import Config, console
+from cloudmesh.ai.common.io import path_expand
 from cloudmesh.ai.common.aggregation import TelemetryAggregator
 from rich.table import Table
 from rich import box
@@ -47,7 +48,7 @@ def telemetry_off():
 def telemetry_list(command, status, since, export):
     """List and filter telemetry records."""
     # Default telemetry DB path
-    db_path = Path("telemetry.db").expanduser()
+    db_path = Path(path_expand("telemetry.db"))
     if not db_path.exists():
         console.print("[yellow]No telemetry database found at telemetry.db[/yellow]")
         return

@@ -20,6 +20,7 @@ Global Objects:
 import os
 import logging
 from cloudmesh.ai.common import logging as ai_log
+from cloudmesh.ai.common.io import path_expand
 from cloudmesh.ai.common.telemetry import Telemetry, JSONFileBackend, TextBackend
 from cloudmesh.ai.cmc.utils import Config
 
@@ -33,7 +34,7 @@ logger.setLevel(getattr(logging, log_level, logging.WARNING))
 
 # Initialize Telemetry based on config
 telemetry_enabled = config.get("telemetry.enabled", True)
-telemetry_path = os.path.expanduser(config.get("telemetry.path", "~/cmc_telemetry.jsonl"))
+telemetry_path = path_expand(config.get("telemetry.path", "~/cmc_telemetry.jsonl"))
 
 if not telemetry_enabled:
     os.environ["CLOUDMESH_AI_TELEMETRY_DISABLED"] = "true"

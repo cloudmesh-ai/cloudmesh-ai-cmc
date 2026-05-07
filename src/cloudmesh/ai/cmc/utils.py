@@ -10,15 +10,14 @@ import pkgutil
 import importlib
 import os
 import sys
-import yaml
 import functools
 import traceback
 import copy
 from pathlib import Path
 from typing import Any, Dict, Optional
-from rich.console import Console
 
 from cloudmesh.ai.common import logging as ai_log
+from cloudmesh.ai.common.io import console, load_yaml, dump_yaml, path_expand
 
 class CMCError(Exception):
     """Base class for CMC exceptions."""
@@ -32,13 +31,12 @@ class PluginVersionError(CMCError):
     """Raised when a plugin version is incompatible."""
     pass
 
-console = Console()
 logger = ai_log.get_logger("cmc.utils")
 
 class Config:
     """Handles configuration for CMC from a YAML file."""
     
-    DEFAULT_CONFIG_PATH = Path("~/.config/cloudmesh/cmc.yaml").expanduser()
+    DEFAULT_CONFIG_PATH = Path(path_expand("~/.config/cloudmesh/cmc.yaml"))
     
     DEFAULTS = {
         "telemetry": {
@@ -71,14 +69,9 @@ class Config:
 
     def _load_config(self):
         """Loads configuration from the YAML file on disk and updates defaults."""
-        if self.path.exists():
-            try:
-                with open(self.path, "r") as f:
-                    user_config = yaml.safe_load(f)
-                    if user_config:
-                        self._deep_update(self.data, user_config)
-            except Exception as e:
-                logger.warning(f"Could not load config file {self.path}: {e}")
+        user_config = load_yaml(str(self.path))
+        if user_config:
+            self._deep_update(self.data, user_config)
 
     def _deep_update(self, base: Dict, update: Dict):
         """Recursively updates a dictionary.
@@ -170,13 +163,7 @@ class Config:
         Raises:
             Exception: If the configuration file cannot be saved.
         """
-        try:
-            self.path.parent.mkdir(parents=True, exist_ok=True)
-            with open(self.path, "w") as f:
-                yaml.dump(self.data, f, default_flow_style=False)
-        except Exception as e:
-            logger.error(f"Could not save config file {self.path}: {e}")
-            raise
+        dump_yaml(str(self.path), self.data)
 
 def handle_errors(func):
     """Decorator to provide standardized error handling for CMC commands.
