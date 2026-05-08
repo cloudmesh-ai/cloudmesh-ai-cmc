@@ -1,6 +1,6 @@
 import click
 from typing import Optional, Tuple, Callable
-from cloudmesh.common.StopWatch import progress as progress_func
+from cloudmesh.ai.common.logging import progress as progress_func
 
 @click.command()
 @click.argument('progress_value', type=int)
