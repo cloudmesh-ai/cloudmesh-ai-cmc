@@ -1,6 +1,6 @@
 # cloudmesh-ai-cmc
 
-`cloudmesh-ai-cmc` is a professional-grade, highly extensible Command Line
+`cloudmesh-ai-cmc` is a highly extensible Command Line
 Interface (CLI) framework designed to integrate AI-driven tools and custom
 extensions seamlessly. It serves as the central orchestrator for the
 Cloudmesh AI ecosystem, providing a robust registry system for managing
