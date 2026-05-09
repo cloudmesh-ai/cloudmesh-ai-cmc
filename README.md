@@ -218,6 +218,12 @@ To start a new extension, use the scaffolding command:
 cmc command create my-new-tool
 ```
 
+## Example Extensions
+
+For detailed guides on how to implement and deploy specific AI tools using the CMC framework, see:
+- [Gemma Service Guide](../cloudmesh-ai-commander/README-gemma.md)
+- [Mock Server Guide](../cloudmesh-ai-commander/README-mock.md)
+
 ## Developer's Guide
 
 ### Extension Patterns
