@@ -8,6 +8,7 @@ dynamic = ["version"]
 description = "Command Line Interface (CLI) framework for the Cloudmesh AI ecosystem, providing a registry system for managing AI-driven tools and extensions."
 readme = "README.md"
 license = "Apache-2.0"
+urls = { "Homepage" = "https://github.com/cloudmesh-ai/cloudmesh-ai-cmc" }
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: System Administrators",
