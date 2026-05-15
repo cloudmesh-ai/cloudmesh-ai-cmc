@@ -4,4 +4,4 @@ This page provides the API reference for the `cloudmesh-ai-cmc` library.
 
 ## API Documentation
 
-::: cloudmesh.ai.command.time
+::: cloudmesh.ai.cmc
