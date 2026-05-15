@@ -1,5 +1,8 @@
 # cloudmesh-ai-cmc
 
+**Quick Links:**
+- [API Reference](API.md) - Full technical documentation of all modules.
+
 `cloudmesh-ai-cmc` is a highly extensible Command Line
 Interface (CLI) framework designed to integrate AI-driven tools and custom
 extensions seamlessly. It serves as the central orchestrator for the
