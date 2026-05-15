@@ -3,11 +3,20 @@
 **Quick Links:**
 - [API Reference](API.md) - Full technical documentation of all modules.
 
-`cloudmesh-ai-cmc` is a highly extensible Command Line
+`cloudmesh-ai-cmc` is an extensible Command Line
 Interface (CLI) framework designed to integrate AI-driven tools and custom
 extensions seamlessly. It serves as the central orchestrator for the
 Cloudmesh AI ecosystem, providing a robust registry system for managing
 commands and a developer-friendly environment for rapid extension creation.
+
+## About
+
+The `cmc` tool serves as a central hub for AI extensions. Whether you are performing system diagnostics, generating documentation, or running speed tests, `cmc` provides a consistent interface to interact with various AI models and tools.
+
+Its core strength lies in its **Extension Registry**, which allows you to load plugins from:
+- **Core**: Built-in extensions bundled with the package.
+- **Pip**: Extensions installed via `pip` using entry points.
+- **Registry**: Local extensions registered via a path on your filesystem.
 
 ## Usage
 
@@ -33,8 +42,8 @@ Commands:
     cmc shell                        Enter an interactive CMC shell.
     cmc docs                         Display framework documentation.
     cmc logs [--command <name>] [--status <status>] [--since <days>]
-             [--limit <n>] [--format <fmt>] [--summary]
-                                     View and analyze telemetry logs.
+              [--limit <n>] [--format <fmt>] [--summary]
+                                      View and analyze telemetry logs.
     cmc doctor                       Perform a system health check.
     cmc tree                         Display directory structure visually.
     cmc time                         Stopwatch commands for execution time.
@@ -51,13 +60,35 @@ Commands:
         cmc telemetry on             Enable telemetry collection.
         cmc telemetry off            Disable telemetry collection.
         cmc telemetry list [--command <name>] [--status <status>]
-                       [--since <days>] [--export <fmt>]
-                                     List and filter telemetry records.
+                        [--since <days>] [--export <fmt>]
+                                      List and filter telemetry records.
     cmc markdown                     Markdown utility tools.
         cmc markdown fix <file>      Fix formatting issues in a file.
     cmc sys                          System information and diagnostics.
         cmc sys info                 Display system information.
 ```
+
+## Quickstart
+
+1. **Verify Installation**:
+   ```bash
+   cmc version
+   ```
+
+2. **Explore Available Commands**:
+   ```bash
+   cmc --help
+   ```
+
+3. **Enter Interactive Mode**:
+   ```bash
+   cmc shell
+   ```
+
+4. **Read the Documentation**:
+   ```bash
+   cmc docs
+   ```
 
 ## Key Features
 
@@ -88,6 +119,8 @@ Commands:
 
 ## Installation
 
+> **Note:** `cmc` is primarily developed on Linux and macOS. As the developers do not use Windows (PowerShell), we strongly recommend using **Git Bash** or **WSL2** for the best experience on Windows.
+
 ### Recommended: Using pipx
 For the best experience with CLI tools, use `pipx` to install `cloudmesh-ai-cmc` in an isolated environment. This prevents dependency conflicts and automatically adds the `cmc` command to your PATH.
 
@@ -110,6 +143,16 @@ pip install cloudmesh-ai-cmc
 To install from a local directory:
 ``` bash
 pip install .
+```
+
+### Windows Specifics
+**Git Bash / WSL2**: Follow the Linux installation steps.
+
+**PowerShell/CMD**: It is recommended to use a Python virtual environment:
+```powershell
+python -m venv venv
+.\venv\Scripts\activate
+pip install cloudmesh-ai-cmc
 ```
 
 ## Detailed Usage Guide
@@ -221,46 +264,114 @@ To start a new extension, use the scaffolding command:
 cmc command create my-new-tool
 ```
 
-## Example Extensions
+## Interactive Shell
 
-For detailed guides on how to implement and deploy specific AI tools using the CMC framework, see:
-- [Gemma Service Guide](../cloudmesh-ai-commander/README-gemma.md)
-- [Mock Server Guide](../cloudmesh-ai-commander/README-mock.md)
+The `cmc shell` provides an immersive environment for interacting with the CMC ecosystem without needing to restart the CLI for every command.
+
+### Key Features
+- **Tab Completion**: Intelligent autocomplete for all registered CMC commands, sub-commands, and internal shell utilities.
+- **Persistent History**: Command history is saved to `~/.config/cloudmesh/ai/cmc_history`, allowing you to recall previous commands across sessions.
+- **Dynamic Updates**: The command completer is refreshed on every loop, meaning newly added or enabled plugins are immediately available for autocomplete.
+
+### Internal Shell Commands
+In addition to standard `cmc` commands, the shell supports several built-in utilities:
+
+| Command | Description | Example |
+| :--- | :--- | :--- |
+| `help` | Displays the shell help menu. | `help` |
+| `set <K>=<V>` | Sets a temporary environment variable for the current session. | `set API_KEY=secret123` |
+| `h <num>` | Displays the last `<num>` commands from the history file. | `h 10` |
+| `exit` / `quit` / `q` | Exits the interactive shell. | `exit` |
+
+### Usage Example
+```bash
+# 1. Enter the interactive shell
+cmc shell
+
+# 2. Inside the shell, run a CMC command (with tab completion)
+cmc> version
+
+# 3. Set a session variable for a plugin
+cmc> set MODEL_NAME=gpt-4o
+
+# 4. Run a command that uses that variable
+cmc> doctor
+
+# 5. View recent history
+cmc> h 5
+
+# 6. Exit the shell
+cmc> exit
+```
+
+## Configuration & Environment
+
+`cmc` uses a YAML configuration file located at `~/.config/cloudmesh/ai/cmc.yaml`.
+
+### Environment Variable Overrides
+You can override any configuration setting using environment variables with the `CMC_` prefix. Dot-separated keys are converted to underscores and uppercase.
+
+**Example:**
+- `telemetry.path` $\rightarrow$ `CMC_TELEMETRY_PATH`
+- `logging.level` $\rightarrow$ `CMC_LOGGING_LEVEL`
+
+```bash
+# Override log level for a single execution
+CMC_LOGGING_LEVEL=DEBUG cmc doctor
+```
+
+## Logging and Debugging
+
+`cmc` uses a configurable logging system. You can control the granularity of the output using the `CMC_LOGGING_LEVEL` environment variable or the `--debug` flag.
+
+### Log Levels
+- `ERROR`: Only critical errors are shown.
+- `WARNING`: Errors and potential issues are shown (Default).
+- `INFO`: General operational messages.
+- `DEBUG`: Detailed diagnostic information, including extension loading and validation steps.
+
+### Usage
+```bash
+# Using the CLI flag
+cmc --debug doctor
+```
 
 ## Developer's Guide
 
 ### Extension Patterns
 
 #### 1. Simple Extension (Function-based)
-
 Best for single-purpose tools. Define a `click` command in your module:
 
 ``` python
 import click
 
+version = "0.1.0"
+description = "My awesome AI extension"
+dependencies = []  # List of other plugin names this plugin depends on
+
 @click.command()
 def entry_point():
-    click.echo("Hello from a simple extension!")
+    """Plugin description here."""
+    click.echo("Hello from the new plugin!")
 ```
 
 #### 2. Advanced Extension (The `register` Pattern)
-
 Best for complex tools with sub-commands. Implement a `register` function:
 
 ``` python
 import click
 
-@click.group()
-def my_tool_group():
-    """Main group for my complex tool."""
-    pass
-
-@my_tool_group.command()
-def run():
-    click.echo("Running complex logic...")
+@click.command()
+def start():
+    click.echo("Service started!")
 
 def register(cli):
-    cli.add_command(my_tool_group)
+    @cli.group(name="myservice")
+    def service_group():
+        """Manage the custom service."""
+        pass
+    service_group.add_command(start)
 ```
 
 ### Distribution Comparison
@@ -306,19 +417,6 @@ cmc man speedtest
 
 ``` text
 cmc version 0.1.0
-```
-
-## Logging and Debugging
-
-### Log Levels
-
-Controlled via the `CMC_LOG_LEVEL` environment variable: - `ERROR`: Only critical failures. - `WARNING`: Potential issues and errors. - `INFO`: Standard operational messages (Default). - `DEBUG`: Full diagnostic trace, including lazy-loading events.
-
-### Example
-
-``` bash
-# Run a command with full debug tracing
-CMC_LOG_LEVEL=DEBUG cmc speedtest run my-server.com
 ```
 
 ## Architecture
