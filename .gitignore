@@ -1,6 +1,5 @@
 .DS_Store
 .report.html
-assets/
 .python-version
 .aider*
 # Byte-compiled / optimized / DLL files
