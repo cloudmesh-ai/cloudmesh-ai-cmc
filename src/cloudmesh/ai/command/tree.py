@@ -55,6 +55,7 @@ class TreeEngine:
         self.show_content = show_content
         self.user_excludes = self._parse_patterns(exclude)
         self.user_includes = self._parse_patterns(include)
+        self.files_to_preview = []
         self.internal_ignore = {
             "__pycache__",
             ".git",
@@ -70,6 +71,7 @@ class TreeEngine:
             "target",
             "dist",
             "build",
+            "PKG-INFO",
         }
 
     def _parse_patterns(self, pattern_str):
@@ -97,8 +99,11 @@ class TreeEngine:
 
         # 2. Check User Excludes
         for pattern in self.user_excludes:
-            if fnmatch.fnmatch(name, pattern) or fnmatch.fnmatch(
-                str(rel_path), pattern
+            if (
+                pattern in name
+                or pattern in str(rel_path)
+                or fnmatch.fnmatch(name, pattern)
+                or fnmatch.fnmatch(str(rel_path), pattern)
             ):
                 return True
 
@@ -143,26 +148,46 @@ class TreeEngine:
             style = "[bold blue]" if item.is_dir() else "[green]"
             console.print(f"{prefix}{connector}{style}{item.name}[/]")
 
-            # Optional: Print file content summary
+            # Collect files for preview if requested
             if self.show_content and item.is_file():
-                self._print_file_preview(item, prefix + ("    " if is_last else "│   "))
+                self.files_to_preview.append(item)
 
             # Recurse if directory
             if item.is_dir():
                 new_prefix = prefix + ("    " if is_last else "│   ")
                 self.build_tree(item, new_prefix)
 
-    def _print_file_preview(self, path, prefix):
-        """Prints the first 3 non-empty lines of a file as a preview."""
+    def _print_file_preview(self, path, prefix=""):
+        """Prints the full content of the file in a formatted block."""
         try:
             with open(path, "r", encoding="utf-8") as f:
-                lines = [f.readline().strip() for _ in range(3)]
-                lines = [l for l in lines if l]
+                lines = f.readlines()
                 if lines:
+                    filename = path.name
+                    
+                    # Format as requested:
+                    # =============================
+                    # filename
+                    # --------------------------------------content
+                    # =============================
+                    console.print(f"{prefix}=============================")
+                    console.print(f"{prefix}{filename}")
+                    console.print(f"{prefix}---------------------------------------")
                     for line in lines:
-                        console.print(f"{prefix}[dim italic white]  {line}[/]")
+                        console.print(f"{prefix}{line.rstrip()}")
+                    console.print(f"{prefix}=============================")
         except (UnicodeDecodeError, PermissionError):
             pass
+
+    def print_all_previews(self):
+        """Prints previews for all collected files."""
+        if not self.files_to_preview:
+            return
+        
+        console.print("\n[bold]File Contents:[/]")
+        for file_path in self.files_to_preview:
+            self._print_file_preview(file_path)
+            console.print("") # Add spacing between files
 
 
 # ==============================================================================
@@ -187,6 +212,8 @@ def cmd_tree(path, content, exclude, include):
     console.print(f"[bold blue]{Path(path).resolve()}[/]")
     engine = TreeEngine(path, content, exclude, include)
     engine.build_tree()
+    if content:
+        engine.print_all_previews()
 
 
 def register(cli):
