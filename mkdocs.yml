@@ -4,7 +4,7 @@ extra_css:
 nav:
 - Home: index.md
 - Documentation:
-  - README: README.md
+  - README: readme.md
   - Commands: DOCS.md
 - Project:
   - Changelog: CHANGELOG.md
