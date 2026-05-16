@@ -85,7 +85,7 @@ doc:
 	mkdocs build
 
 view:
-	mkdocs serve
+	mkdocs serve --livereload
 
 # --- CLEANUP & REINSTALL ---
 
