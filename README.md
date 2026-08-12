@@ -124,24 +124,24 @@ Commands:
 ### Recommended: Using pipx
 For the best experience with CLI tools, use `pipx` to install `cloudmesh-ai-cmc` in an isolated environment. This prevents dependency conflicts and automatically adds the `cmc` command to your PATH.
 
-``` bash
+```bash
 pipx install cloudmesh-ai-cmc
 ```
 
 To install from a local directory:
-``` bash
+```bash
 pipx install .
 ```
 
 ### Using pip
 If you prefer a standard installation in your current environment:
 
-``` bash
+```bash
 pip install cloudmesh-ai-cmc
 ```
 
 To install from a local directory:
-``` bash
+```bash
 pip install .
 ```
 
@@ -195,7 +195,7 @@ command entry and discovery.
 
 The easiest way to set up completion is to use the built-in install flag:
 
-``` bash
+```bash
 cmc completion --install
 ```
 
@@ -216,7 +216,7 @@ shell configuration file:
 After installation or manual editing, reload your shell profile to activate
 completion immediately:
 
-``` bash
+```bash
 # For Bash/Zsh
 source ~/.bashrc  # or ~/.zshrc
 
@@ -244,7 +244,7 @@ If completion is not working after following the steps above:
 
 The registry allows you to control which AI tools are available.
 
-``` bash
+```bash
 # View all available extensions and whether they are active
 cmc command list
 
@@ -260,9 +260,11 @@ cmc command deactivate speedtest
 
 To start a new extension, use the scaffolding command:
 
-``` bash
+```bash
 cmc command create my-new-tool
 ```
+
+For a detailed step-by-step guide, see the [Developer's Guide](#developers-guide) below.
 
 ## Interactive Shell
 
@@ -340,6 +342,30 @@ cmc --debug doctor
 
 ### Extension Patterns
 
+#### Creating a Command with `cmc command create`
+
+The easiest way to build a new extension is using the built-in scaffolding tool. This ensures your project has the correct directory structure and configuration for the CMC framework.
+
+**1. Scaffold the project**
+```bash
+cmc command create my-tool
+```
+
+**2. Implement your logic**
+The tool generates a project in `./my-tool`. Edit `src/cloudmesh/ai/command/my_tool.py` to define your command group and subcommands. We recommend the **Advanced Pattern** for better scalability.
+
+**3. Install for development**
+Use an editable install to test your changes instantly:
+```bash
+cd my-tool
+pip install -e .
+```
+
+**4. Verify**
+```bash
+cmc my-tool run
+```
+
 #### 1. Simple Extension (Function-based)
 Best for single-purpose tools. Define a `click` command in your module:
 
@@ -405,7 +431,7 @@ To disable telemetry globally, set the following environment variable: `CLOUDMES
 
 ## Documentation and Help
 
-``` bash
+```bash
 # View the global AI documentation index
 cmc docs
 

@@ -206,6 +206,77 @@ def handle_errors(func):
             sys.exit(1)
     return wrapper
 
+class Registry:
+    """Manages the registration and status of AI extensions.
+    
+    Persists extension metadata within the main CMC configuration file.
+    """
+    
+    def __init__(self):
+        # Initialize the main config to store registry data
+        from cloudmesh.ai.cmc.utils import Config
+        self.config = Config()
+        self.extensions = self.config.get("registry", {})
+
+    def _save_registry(self):
+        """Saves the current registry state to the main config file."""
+        try:
+            self.config.set("registry", self.extensions)
+            self.config.save()
+        except Exception as e:
+            logger.error(f"Failed to save registry to config: {e}")
+
+    def register(self, name: str, directory: str):
+        """Registers a new extension path.
+        
+        Args:
+            name (str): The name of the extension.
+            directory (str): Path to the extension directory.
+        """
+        # Try to find version in pyproject.toml
+        version = "0.0.0"
+        pyproject_path = Path(directory) / "pyproject.toml"
+        if pyproject_path.exists():
+            try:
+                import tomllib # Python 3.11+
+                with open(pyproject_path, "rb") as f:
+                    data = tomllib.load(f)
+                    version = data.get("project", {}).get("version", "0.0.0")
+            except Exception:
+                pass
+
+        self.extensions[name] = {
+            "path": str(Path(directory).resolve()),
+            "version": version,
+            "active": True
+        }
+        self._save_registry()
+
+    def set_status(self, name: str, active: bool) -> bool:
+        """Updates the active status of an extension.
+        
+        Returns:
+            bool: True if updated, False if extension not found.
+        """
+        if name in self.extensions:
+            self.extensions[name]["active"] = active
+            self._save_registry()
+            return True
+        return False
+
+    def unregister(self, name: str):
+        """Removes an extension from the registry."""
+        if name in self.extensions:
+            del self.extensions[name]
+            self._save_registry()
+
+    def list_all_details(self):
+        """Returns a list of all registered extensions with their details."""
+        return [
+            {"name": name, **details}
+            for name, details in self.extensions.items()
+        ]
+
 def register_group_extensions(parent_group, group_package, child_target=None):
     """Iteratively loads all modules in a package and calls their register() function.
 

@@ -54,20 +54,54 @@ def cmd_deactivate(name):
 
 @click.command(name="list")
 def cmd_list():
-    """List all registered commands using a professional Rich table."""
-    from cloudmesh.ai.cmc.main import registry
+    """List all available AI extensions (Core, Pip, and Registered)."""
+    from cloudmesh.ai.cmc.main import registry, cli
+    
+    # 1. Get Registered extensions (local paths)
+    registered = registry.list_all_details()
+    
+    # 2. Identify all other loaded commands from the CLI root
+    all_loaded = []
+    for name, cmd in cli.commands.items():
+        # Skip the 'command' group itself
+        if name == "command":
+            continue
+            
+        # Determine source
+        source = "Core"
+        path = "Built-in"
+        version = "Core"
+        
+        # Check if it's a LazyCommand (likely Pip)
+        if hasattr(cmd, 'module_name') and hasattr(cmd, 'entry_point_name'):
+            source = "Pip"
+            path = cmd.module_name
+            version = "Installed"
+        
+        # Check if it's in the registry (Local)
+        if name in registry.extensions:
+            source = "Registered"
+            reg_data = registry.extensions[name]
+            path = reg_data.get("path", "Unknown")
+            version = reg_data.get("version", "0.0.0")
+            status = "[green]active[/green]" if reg_data.get("active") else "[red]inactive[/red]"
+        else:
+            status = "[green]active[/green]"
 
-    details = registry.list_all_details()
+        all_loaded.append((name, version, status, source, path))
 
-    if not details:
-        console.warning("Registry is empty.")
+    if not all_loaded:
+        console.warning("No AI extensions found.")
         return
 
-    data = [
-        (item["name"], item["version"], "[green]active[/green]" if item["active"] else "[red]inactive[/red]", item["path"])
-        for item in details
-    ]
-    console.table(["COMMAND", "VERSION", "STATUS", "SOURCE PATH"], data, title="CME Command Registry")
+    # Sort by source (Core -> Pip -> Registered)
+    all_loaded.sort(key=lambda x: (x[3] != "Core", x[3] != "Pip", x[0]))
+    
+    console.table(
+        ["COMMAND", "VERSION", "STATUS", "SOURCE", "PATH"], 
+        all_loaded, 
+        title="CME AI Extension Registry"
+    )
 
 
 @click.command(name="unload")
@@ -135,8 +169,8 @@ def cmd_create(name, groups, path):
 
     try:
         import shutil
-        # Copy the example template
-        shutil.copytree(example_dir, target_dir)
+        # Copy the example template, ignoring .git directory
+        shutil.copytree(example_dir, target_dir, ignore=shutil.ignore_patterns('.git'))
 
         # Replace placeholders in all files and rename files
         # We collect paths first to avoid issues with modifying the directory tree while iterating
@@ -147,9 +181,12 @@ def cmd_create(name, groups, path):
                 new_content = content.replace("{{name}}", root_name)
                 file_path.write_text(new_content, encoding="utf-8")
                 
-                # Rename file if it contains placeholder
+                # Rename file if it contains placeholder or is the example plugin
                 if "{{name}}" in file_path.name:
                     new_name = file_path.name.replace("{{name}}", root_name)
+                    file_path.rename(file_path.with_name(new_name))
+                elif file_path.name == "example.py":
+                    new_name = f"{root_name}.py"
                     file_path.rename(file_path.with_name(new_name))
 
         # Handle sub-commands (groups) in the plugin file

@@ -19,7 +19,7 @@ import importlib.resources
 import shutil
 from cloudmesh.ai.common import logging as ai_log
 from cloudmesh.ai.common.telemetry import Telemetry, JSONFileBackend, TextBackend
-from cloudmesh.ai.cmc.utils import Config, handle_errors, console
+from cloudmesh.ai.cmc.utils import Config, handle_errors, console, Registry
 from rich.logging import RichHandler
 from rich.console import Console
 from rich.table import Table
@@ -60,6 +60,9 @@ class LazyCommand:
         return "Lazy-loaded extension"
 
 from cloudmesh.ai.cmc.context import config, logger, telemetry
+
+# Instantiate the global registry for extension management
+registry = Registry()
 
 
 class DelegatingCommand(click.Group):

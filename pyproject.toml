@@ -6,6 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "cloudmesh-ai-cmc"
 dynamic = ["version"]
 description = "Command Line Interface (CLI) framework for the Cloudmesh AI ecosystem, providing a registry system for managing AI-driven tools and extensions."
+requires-python = ">=3.12"
 readme = "README.md"
 license = "Apache-2.0"
 urls = { "Homepage" = "https://github.com/cloudmesh-ai/cloudmesh-ai-cmc" }
