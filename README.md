@@ -249,7 +249,7 @@ The registry allows you to control which AI tools are available.
 cmc command list
 
 # Load a custom extension you are developing locally
-cmc command load /Users/grey/work/my-ai-extension
+cmc command load /Users/grey/work/myextension
 
 # Toggle a command's availability
 cmc command activate speedtest
@@ -261,7 +261,7 @@ cmc command deactivate speedtest
 To start a new extension, use the scaffolding command:
 
 ```bash
-cmc command create my-new-tool
+cmc command create myextension
 ```
 
 For a detailed step-by-step guide, see the [Developer's Guide](#developers-guide) below.
@@ -348,23 +348,51 @@ The easiest way to build a new extension is using the built-in scaffolding tool.
 
 **1. Scaffold the project**
 ```bash
-cmc command create my-tool
+cmc command create myextension
 ```
 
 **2. Implement your logic**
-The tool generates a project in `./my-tool`. Edit `src/cloudmesh/ai/command/my_tool.py` to define your command group and subcommands. We recommend the **Advanced Pattern** for better scalability.
+The tool generates a project in `./myextension`. Edit `src/cloudmesh/ai/command/myextension.py` to define your command group and subcommands. We recommend the **Advanced Pattern** for better scalability.
 
 **3. Install for development**
 Use an editable install to test your changes instantly:
 ```bash
-cd my-tool
+cd myextension
 pip install -e .
 ```
 
 **4. Verify**
 ```bash
-cmc my-tool run
+cmc myextension run
 ```
+
+#### Publishing to GitHub with `cmc command upload`
+
+Once your extension is tested and ready for distribution, you can upload it directly to GitHub using the `upload` command. This tool automates the repository creation and initial push process.
+
+**Basic Usage**
+If you are inside your project directory:
+```bash
+cmc command upload .
+```
+
+**Specifying a Path**
+You can also upload from any directory by providing the path to the extension:
+```bash
+cmc command upload /Users/grey/work/cloudmesh-ai-myextension
+```
+
+**Custom Organization**
+By default, the tool uploads to the `cloudmesh-ai` organization. To use a different one:
+```bash
+cmc command upload . --org=my-custom-org
+```
+
+**What this command does automatically:**
+- **Git Initialization**: Initializes a local git repository if one doesn't exist.
+- **Artifact Filtering**: Creates a `.gitignore` file to prevent uploading `__pycache__`, `.egg-info`, and other build artifacts.
+- **GitHub Integration**: Uses the `gh` CLI to either create a new public repository or update an existing one.
+- **Initial Commit**: Performs an initial commit to ensure the repository is ready for pushing.
 
 #### 1. Simple Extension (Function-based)
 Best for single-purpose tools. Define a `click` command in your module:

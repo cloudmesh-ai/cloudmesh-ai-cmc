@@ -114,6 +114,90 @@ def cmd_unload(name):
     console.ok(f"Unloaded: {name}")
 
 
+@click.command(name="upload")
+@click.argument("path", type=click.Path(exists=True))
+@click.option("--org", default="cloudmesh-ai", help="GitHub organization to upload to. Default: cloudmesh-ai")
+def cmd_upload(path, org):
+    """Upload the command project to GitHub."""
+    import subprocess
+    
+    target_path = Path(path).expanduser().resolve()
+    repo_name = target_path.name
+    full_repo_path = f"{org}/{repo_name}"
+    
+    console.info(f"Preparing to upload {repo_name} to {full_repo_path}...")
+
+    # 1. Ensure .gitignore exists to avoid uploading junk
+    gitignore_path = target_path / ".gitignore"
+    gitignore_content = (
+        "__pycache__/\n"
+        "*.py[cod]\n"
+        "*.so\n"
+        ".egg-info/\n"
+        "build/\n"
+        "dist/\n"
+        ".DS_Store\n"
+        ".venv/\n"
+        "venv/\n"
+    )
+    if not gitignore_path.exists():
+        gitignore_path.write_text(gitignore_content)
+        console.info("Created .gitignore to exclude artifacts.")
+
+    def run_cmd(cmd, cwd=None):
+        result = subprocess.run(cmd, shell=True, capture_output=True, text=True, cwd=cwd)
+        return result
+
+    # Ensure git is initialized locally before any GH or Git operations
+    if not (target_path / ".git").exists():
+        console.info("Initializing local git repository...")
+        run_cmd("git init", cwd=target_path)
+
+    # Ensure there is at least one commit so that 'gh repo create --push' works
+    run_cmd("git add .", cwd=target_path)
+    commit_res = run_cmd('git commit -m "Initial commit from CMC upload"', cwd=target_path)
+    if "nothing to commit" not in commit_res.stdout and "nothing to commit" not in commit_res.stderr:
+        console.info("Created initial commit for upload.")
+
+    # 2. Check if repo exists on GitHub
+    check_repo = run_cmd(f"gh repo view {full_repo_path}")
+    
+    if check_repo.returncode != 0:
+        # Repo doesn't exist, create it
+        console.info(f"Repository {full_repo_path} not found. Creating it...")
+        # Use absolute path for --source to avoid dependency on current shell directory
+        create_repo = run_cmd(f"gh repo create {full_repo_path} --public --source='{target_path}' --remote=origin --push", cwd=target_path)
+        if create_repo.returncode == 0:
+            console.ok(f"Successfully created and uploaded {full_repo_path}")
+        else:
+            console.error(f"Failed to create repository: {create_repo.stderr}")
+    else:
+        # Repo exists, update it
+        console.info(f"Repository {full_repo_path} exists. Updating files...")
+        
+        # Ensure remote is set
+        remote_check = run_cmd("git remote", cwd=target_path)
+        if full_repo_path.split('/')[-1] not in remote_check.stdout:
+            run_cmd(f"git remote add origin https://github.com/{full_repo_path}.git", cwd=target_path)
+        
+        # Stage and push
+        run_cmd("git add .", cwd=target_path)
+        commit_res = run_cmd('git commit -m "Update from CMC upload"', cwd=target_path)
+        
+        if "nothing to commit" in commit_res.stdout or "nothing to commit" in commit_res.stderr:
+            console.info("No new changes to upload.")
+        else:
+            push_res = run_cmd("git push origin main", cwd=target_path)
+            if push_res.returncode != 0:
+                # Try master if main fails
+                push_res = run_cmd("git push origin master", cwd=target_path)
+                
+            if push_res.returncode == 0:
+                console.ok(f"Successfully updated {full_repo_path}")
+            else:
+                console.error(f"Failed to push changes: {push_res.stderr}")
+
+
 @click.command(name="create")
 @click.argument("name")
 @click.option(

@@ -199,7 +199,7 @@ cmc --debug doctor
 
 The easiest way to create a new extension is using the built-in scaffolding tool:
 ```bash
-cmc init-plugin my-extension
+cmc init-plugin myextension
 ```
 
 ### Manual Implementation

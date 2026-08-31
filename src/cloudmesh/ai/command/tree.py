@@ -165,16 +165,12 @@ class TreeEngine:
                 if lines:
                     filename = path.name
                     
-                    # Format as requested:
-                    # =============================
-                    # filename
-                    # --------------------------------------content
-                    # =============================
                     console.print(f"{prefix}=============================")
                     console.print(f"{prefix}{filename}")
                     console.print(f"{prefix}---------------------------------------")
                     for line in lines:
-                        console.print(f"{prefix}{line.rstrip()}")
+                        # ADD markup=False HERE to prevent Rich from parsing file code as styling tags
+                        console.print(f"{prefix}{line.rstrip()}", markup=False)
                     console.print(f"{prefix}=============================")
         except (UnicodeDecodeError, PermissionError):
             pass
