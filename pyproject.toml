@@ -28,7 +28,6 @@ dependencies = [
     "twine",
     "prompt_toolkit",
     "cloudmesh-ai-common",
-    "cloudmesh-ai-theme",
 ]
 
 [project.scripts]

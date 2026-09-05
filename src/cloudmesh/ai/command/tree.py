@@ -72,6 +72,8 @@ class TreeEngine:
             "dist",
             "build",
             "PKG-INFO",
+            "*-info",
+            ".gitignore"
         }
 
     def _parse_patterns(self, pattern_str):
