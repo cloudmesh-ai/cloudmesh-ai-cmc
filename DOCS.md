@@ -1,1 +1,0 @@
-src/cloudmesh/ai/cmc/DOCS.md

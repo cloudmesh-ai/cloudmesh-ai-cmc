@@ -1,0 +1,187 @@
+Release Log for cloudmesh-ai-cmc version 7.1.6
+Started at: 2026-09-04T21:07:21.817633
+----------------------------------------
+[2026-09-04 21:07:21] DEBUG: Executing: git describe --tags --abbrev=0
+STDOUT:
+v7.1.3.dev1
+
+[2026-09-04 21:07:21] DEBUG: Generating changelog for v7.1.3.dev1..HEAD...
+[2026-09-04 21:07:21] DEBUG: Executing: git log v7.1.3.dev1..HEAD --oneline --no-merges
+STDOUT:
+d4fa571 update version
+5ef6653 update tree
+72f4d68 fix tree command
+8cb1b5b Fix registry ImportError, merge registry into main config, and implement comprehensive extension listing
+56e184d Centralize theme assets and update configuration
+9bafce2 Convert cloudmesh-ai-theme to MkDocs plugin and update release workflows
+d22b7c8 Fix README 404: rename docs/README.md to docs/readme.md
+cbd69ae Fix nav order: Documentation above Project
+07dceec Fix docs: add symlinks for root md files and update mkdocs.yml
+cc9da36 Update version to 7.1.4.dev1
+0982564 Commit updated Makefiles, mkdocs.yml and documentation changes
+514a07a Update mkdocs.yml nav links and merge DOCS.md into README.md
+ca06da2 Update .gitignore and add docs/assets
+17514dc docs: standardize api.md content
+e6fd37c docs: ensure index.md links to README.md
+de43ec1 docs: remove invalid show_root_toc and standardize api.md case
+42ca120 docs: implement robust force-push publish script
+6d25e95 docs: standardize theme, logo, and favicon from example
+ecc1b17 fix: flatten .PHONY list to resolve missing separator error
+469975b docs: link index.md to README.md to fix homepage 404
+acb4d55 docs: add view target to Makefile
+e470f72 docs: add .nojekyll for GitHub Pages
+6f5f26d docs: add doc target to Makefile
+dd3f968 docs: add missing api.md
+5c45ae8 fix: correct tab indentation in Makefile publish target
+39f6e8e docs: rename API.md to api.md for case-sensitivity
+3c6123d docs: update publish target in Makefile
+d7ad3cd add doc
+5c4c137 Unify gemma launch into ai-llm and implement hybrid script-driven orchestration
+8ffdde3 docs: update README and Makefile test target
+
+[2026-09-04 21:07:22] INFO: Creating baseline git commit...
+[2026-09-04 21:07:22] DEBUG: Executing: git rev-parse HEAD
+STDOUT:
+d4fa5715d65e0ec2f0a1245333a72d46cc398985
+
+[2026-09-04 21:07:23] DEBUG: Executing: git describe --tags --always --dirty
+STDOUT:
+v7.1.3.dev1-30-gd4fa571
+
+[2026-09-04 21:07:23] DEBUG: Executing: git add .
+[2026-09-04 21:07:23] DEBUG: Executing: git commit -m Baseline for release 7.1.3.dev1-30-gd4fa571
+STDERR:
+
+[2026-09-04 21:07:23] INFO: No changes to commit for baseline.
+[2026-09-04 21:07:24] INFO: Bumping version to 7.1.6.dev1...
+[2026-09-04 21:07:24] DEBUG: Executing: git rev-parse v7.1.6.dev1
+STDERR:
+fatal: ambiguous argument 'v7.1.6.dev1': unknown revision or path not in the working tree.
+Use '--' to separate paths from revisions, like this:
+'git <command> [<revision>...] -- [<file>...]'
+
+[2026-09-04 21:07:24] INFO: Creating git tag v7.1.6.dev1...
+[2026-09-04 21:07:24] DEBUG: Executing: git tag -a v7.1.6.dev1 -m Release 7.1.6.dev1
+[2026-09-04 21:07:24] DEBUG: Executing: git push origin v7.1.6.dev1
+[2026-09-04 21:07:26] INFO: Building package artifacts...
+[2026-09-04 21:07:26] DEBUG: Executing: /Users/grey/.pyenv/versions/3.14.4/bin/python3 -m pip wheel . -w dist --no-deps --no-build-isolation
+STDOUT:
+WARNING: Ignoring invalid distribution ~sc-lib (/Users/grey/.pyenv/versions/3.14.4/lib/python3.14/site-packages)
+WARNING: Ignoring invalid distribution ~slo-utils (/Users/grey/.pyenv/versions/3.14.4/lib/python3.14/site-packages)
+WARNING: Ignoring invalid distribution ~slo-config (/Users/grey/.pyenv/versions/3.14.4/lib/python3.14/site-packages)
+WARNING: Ignoring invalid distribution ~ython-manilaclient (/Users/grey/.pyenv/versions/3.14.4/lib/python3.14/site-packages)
+WARNING: Ignoring invalid distribution ~sc-lib (/Users/grey/.pyenv/versions/3.14.4/lib/python3.14/site-packages)
+WARNING: Ignoring invalid distribution ~slo-utils (/Users/grey/.pyenv/versions/3.14.4/lib/python3.14/site-packages)
+WARNING: Ignoring invalid distribution ~slo-config (/Users/grey/.pyenv/versions/3.14.4/lib/python3.14/site-packages)
+WARNING: Ignoring invalid distribution ~ython-manilaclient (/Users/grey/.pyenv/versions/3.14.4/lib/python3.14/site-packages)
+Processing ./.
+  Preparing metadata (pyproject.toml): started
+  Preparing metadata (pyproject.toml): finished with status 'done'
+Building wheels for collected packages: cloudmesh-ai-cmc
+  Building wheel for cloudmesh-ai-cmc (pyproject.toml): started
+  Building wheel for cloudmesh-ai-cmc (pyproject.toml): finished with status 'done'
+  Created wheel for cloudmesh-ai-cmc: filename=cloudmesh_ai_cmc-7.1.6.dev1-py3-none-any.whl size=54886 sha256=ff77df08f033596520d684eb472dddd5b7df49a8be884d460b5d68e7902bb2ca
+  Stored in directory: /private/var/folders/q5/s8_pcggn5f73xnz11zjqrhlw0000gp/T/pip-ephem-wheel-cache-xhn8yzwu/wheels/db/fd/aa/289bc515b545d8c79ceb404aa6d8cb2990ddd50bf3dc944e2c
+Successfully built cloudmesh-ai-cmc
+
+[2026-09-04 21:07:27] INFO: Verified artifact: cloudmesh_ai_cmc-7.1.6.dev1-py3-none-any.whl
+[2026-09-04 21:07:27] INFO: Uploading to testpypi...
+[2026-09-04 21:07:27] DEBUG: Executing: twine --no-color upload --repository testpypi /Users/grey/work/cloudmesh-ai-cmc/dist/cloudmesh_ai_cmc-7.1.6.dev1-py3-none-any.whl
+STDOUT:
+Uploading distributions to https://test.pypi.org/legacy/
+Uploading cloudmesh_ai_cmc-7.1.6.dev1-py3-none-any.whl
+[?25l
+[2K  0%                                          0.0/76.3 kB • --:-- • ?
+[2K100% ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 76.3/76.3 kB • 00:00 • 264.4 MB/s
+[2K100% ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 76.3/76.3 kB • 00:00 • 264.4 MB/s
+[2K100% ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 76.3/76.3 kB • 00:00 • 264.4 MB/s
+[2K100% ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 76.3/76.3 kB • 00:00 • 264.4 MB/s
+[2K100% ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 76.3/76.3 kB • 00:00 • 264.4 MB/s
+[2K100% ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 76.3/76.3 kB • 00:00 • 264.4 MB/s
+[2K100% ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 76.3/76.3 kB • 00:00 • 264.4 MB/s
+[2K100% ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 76.3/76.3 kB • 00:00 • 264.4 MB/s
+[2K100% ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 76.3/76.3 kB • 00:00 • 264.4 MB/s
+[2K100% ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 76.3/76.3 kB • 00:00 • 264.4 MB/s
+[2K100% ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 76.3/76.3 kB • 00:00 • 264.4 MB/s
+[2K100% ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 76.3/76.3 kB • 00:00 • 264.4 MB/s
+[?25h
+View at:
+https://test.pypi.org/project/cloudmesh-ai-cmc/7.1.6.dev1/
+
+[2026-09-04 21:07:29] INFO: TestPyPI verification successful.
+[2026-09-04 21:07:30] INFO: Bumping version to 7.1.6...
+[2026-09-04 21:07:30] DEBUG: Executing: git rev-parse v7.1.6
+STDERR:
+fatal: ambiguous argument 'v7.1.6': unknown revision or path not in the working tree.
+Use '--' to separate paths from revisions, like this:
+'git <command> [<revision>...] -- [<file>...]'
+
+[2026-09-04 21:07:30] INFO: Creating git tag v7.1.6...
+[2026-09-04 21:07:30] DEBUG: Executing: git tag -a v7.1.6 -m Release 7.1.6
+[2026-09-04 21:07:30] DEBUG: Executing: git push origin v7.1.6
+[2026-09-04 21:07:32] INFO: Building package artifacts...
+[2026-09-04 21:07:32] DEBUG: Cleaning up old artifacts in dist directory...
+[2026-09-04 21:07:32] DEBUG: Executing: /Users/grey/.pyenv/versions/3.14.4/bin/python3 -m pip wheel . -w dist --no-deps --no-build-isolation
+STDOUT:
+WARNING: Ignoring invalid distribution ~sc-lib (/Users/grey/.pyenv/versions/3.14.4/lib/python3.14/site-packages)
+WARNING: Ignoring invalid distribution ~slo-utils (/Users/grey/.pyenv/versions/3.14.4/lib/python3.14/site-packages)
+WARNING: Ignoring invalid distribution ~slo-config (/Users/grey/.pyenv/versions/3.14.4/lib/python3.14/site-packages)
+WARNING: Ignoring invalid distribution ~ython-manilaclient (/Users/grey/.pyenv/versions/3.14.4/lib/python3.14/site-packages)
+WARNING: Ignoring invalid distribution ~sc-lib (/Users/grey/.pyenv/versions/3.14.4/lib/python3.14/site-packages)
+WARNING: Ignoring invalid distribution ~slo-utils (/Users/grey/.pyenv/versions/3.14.4/lib/python3.14/site-packages)
+WARNING: Ignoring invalid distribution ~slo-config (/Users/grey/.pyenv/versions/3.14.4/lib/python3.14/site-packages)
+WARNING: Ignoring invalid distribution ~ython-manilaclient (/Users/grey/.pyenv/versions/3.14.4/lib/python3.14/site-packages)
+Processing ./.
+  Preparing metadata (pyproject.toml): started
+  Preparing metadata (pyproject.toml): finished with status 'done'
+Building wheels for collected packages: cloudmesh-ai-cmc
+  Building wheel for cloudmesh-ai-cmc (pyproject.toml): started
+  Building wheel for cloudmesh-ai-cmc (pyproject.toml): finished with status 'done'
+  Created wheel for cloudmesh-ai-cmc: filename=cloudmesh_ai_cmc-7.1.6-py3-none-any.whl size=54817 sha256=5d0d000a9d1dc9b3459ba2c742d830a558ed9785dc6bd3e2a9ab94b97ef5eb87
+  Stored in directory: /private/var/folders/q5/s8_pcggn5f73xnz11zjqrhlw0000gp/T/pip-ephem-wheel-cache-ez0uc9t3/wheels/db/fd/aa/289bc515b545d8c79ceb404aa6d8cb2990ddd50bf3dc944e2c
+Successfully built cloudmesh-ai-cmc
+
+[2026-09-04 21:07:33] INFO: Verified artifact: cloudmesh_ai_cmc-7.1.6-py3-none-any.whl
+[2026-09-04 21:07:36] INFO: Uploading to pypi...
+[2026-09-04 21:07:36] DEBUG: Executing: twine --no-color upload /Users/grey/work/cloudmesh-ai-cmc/dist/cloudmesh_ai_cmc-7.1.6-py3-none-any.whl
+STDOUT:
+Uploading distributions to https://upload.pypi.org/legacy/
+Uploading cloudmesh_ai_cmc-7.1.6-py3-none-any.whl
+[?25l
+[2K  0%                                          0.0/76.2 kB • --:-- • ?
+[2K  0%                                          0.0/76.2 kB • --:-- • ?
+[2K100% ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 76.2/76.2 kB • 00:00 • 213.2 MB/s
+[2K100% ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 76.2/76.2 kB • 00:00 • 213.2 MB/s
+[2K100% ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 76.2/76.2 kB • 00:00 • 213.2 MB/s
+[2K100% ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 76.2/76.2 kB • 00:00 • 213.2 MB/s
+[2K100% ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 76.2/76.2 kB • 00:00 • 213.2 MB/s
+[2K100% ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 76.2/76.2 kB • 00:00 • 213.2 MB/s
+[2K100% ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 76.2/76.2 kB • 00:00 • 213.2 MB/s
+[2K100% ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 76.2/76.2 kB • 00:00 • 213.2 MB/s
+[2K100% ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 76.2/76.2 kB • 00:00 • 213.2 MB/s
+[2K100% ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 76.2/76.2 kB • 00:00 • 213.2 MB/s
+[?25h
+View at:
+https://pypi.org/project/cloudmesh-ai-cmc/7.1.6/
+
+[2026-09-04 21:07:37] INFO: Official PyPI release complete!
+[2026-09-04 21:07:37] INFO: Post-release: Preparing next cycle 7.1.7...
+[2026-09-04 21:07:37] DEBUG: Executing: git rev-parse v7.1.7
+STDERR:
+fatal: ambiguous argument 'v7.1.7': unknown revision or path not in the working tree.
+Use '--' to separate paths from revisions, like this:
+'git <command> [<revision>...] -- [<file>...]'
+
+[2026-09-04 21:07:37] INFO: Creating git tag v7.1.7...
+[2026-09-04 21:07:37] DEBUG: Executing: git tag -a v7.1.7 -m Release 7.1.7
+[2026-09-04 21:07:37] DEBUG: Executing: git push origin v7.1.7
+[2026-09-04 21:07:38] DEBUG: Executing: git rev-parse v7.1.7.dev1
+STDERR:
+fatal: ambiguous argument 'v7.1.7.dev1': unknown revision or path not in the working tree.
+Use '--' to separate paths from revisions, like this:
+'git <command> [<revision>...] -- [<file>...]'
+
+[2026-09-04 21:07:38] INFO: Creating git tag v7.1.7.dev1...
+[2026-09-04 21:07:38] DEBUG: Executing: git tag -a v7.1.7.dev1 -m Release 7.1.7.dev1
+[2026-09-04 21:07:38] DEBUG: Executing: git push origin v7.1.7.dev1
+[2026-09-04 21:07:40] INFO: Next release target set to v7.1.7 and dev version to v7.1.7.dev1
