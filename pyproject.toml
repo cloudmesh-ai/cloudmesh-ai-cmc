@@ -46,3 +46,8 @@ package-dir = {"" = "src"}
 [tool.setuptools.packages.find]
 where = ["src"]
 include = ["cloudmesh*"]
+
+[tool.cloudmesh-ai]
+category = "foundation"
+status = "stable"
+
