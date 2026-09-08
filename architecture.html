@@ -12,7 +12,7 @@
         <link rel="prev" href="extensions.html">
       
       
-        <link rel="next" href="CHANGELOG.html">
+        <link rel="next" href="api.html">
       
       
         
@@ -658,7 +658,7 @@
   
   
     <li class="md-nav__item">
-      <a href="CHANGELOG.html" class="md-nav__link">
+      <a href="../CHANGELOG.md" class="md-nav__link">
         
   
   
@@ -895,7 +895,7 @@
 <h2 id="core-design">Core Design</h2>
 <p>Rather than loading every available extension into memory at startup, <code>cmc</code> uses a "lazy loading" approach. Commands are registered in a registry but only imported when actually called by the user.</p>
 <h3 id="execution-flow">Execution Flow</h3>
-<pre><code class="language-mermaid">graph TD
+<pre class="mermaid"><code>graph TD
     A[User Input: cmc &lt;cmd&gt;] --&gt; B[SubcommandHelpGroup]
     B --&gt; C{Is Command Lazy?}
     C -- Yes --&gt; D[LazyCommand Registry]
@@ -903,8 +903,7 @@
     E --&gt; F[DelegatingCommand Wrapper]
     C -- No --&gt; G[Direct Execution]
     F --&gt; H[Extension Logic]
-    G --&gt; H
-</code></pre>
+    G --&gt; H</code></pre>
 <h2 id="the-delegatingcommand-wrapper">The DelegatingCommand Wrapper</h2>
 <p>A key component of the architecture is the <code>DelegatingCommand</code> wrapper. This wrapper is critical for stability in an ecosystem where extensions may be developed and compiled against different versions of the <code>click</code> library.</p>
 <p>By isolating the core framework from the extensions, the <code>DelegatingCommand</code> prevents runtime type-mismatch crashes and ensures that the main CLI remains stable regardless of the specific dependencies of a particular plugin.</p>

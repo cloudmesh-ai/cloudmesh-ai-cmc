@@ -641,7 +641,7 @@
   
   
     <li class="md-nav__item">
-      <a href="CHANGELOG.html" class="md-nav__link">
+      <a href="../CHANGELOG.md" class="md-nav__link">
         
   
   
@@ -864,10 +864,10 @@ A: Ensure the package defines the <code>cloudmesh.ai.command</code> entry point 
 <p><strong>Q: I'm seeing "Click version mismatch" errors in debug logs.</strong>
 A: This is normal behavior. CMC uses the <code>DelegatingCommand</code> wrapper to isolate extensions, ensuring they execute correctly despite version differences in the <code>click</code> library.</p>
 <p><strong>Q: How do I debug a failing <code>command load</code>?</strong>
-A: Run the command with the <code>CMC_LOG_LEVEL</code> environment variable set to <code>DEBUG</code>:</p>
-<pre><code class="language-bash">CMC_LOG_LEVEL=DEBUG cmc command load &lt;path&gt;
-</code></pre>
-<p>The logs will show exactly where the <code>importlib</code> failure occurred during the lazy-load attempt.</p>
+A: Run the command with the <code>CMC_LOG_LEVEL</code> environment variable set to <code>DEBUG</code>:
+<div class="highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nv">CMC_LOG_LEVEL</span><span class="o">=</span>DEBUG<span class="w"> </span>cmc<span class="w"> </span><span class="nb">command</span><span class="w"> </span>load<span class="w"> </span>&lt;path&gt;
+</span></code></pre></div>
+The logs will show exactly where the <code>importlib</code> failure occurred during the lazy-load attempt.</p>
 <h2 id="common-error-messages">Common Error Messages</h2>
 <table>
 <thead>

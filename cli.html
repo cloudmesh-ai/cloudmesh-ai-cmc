@@ -825,7 +825,7 @@
   
   
     <li class="md-nav__item">
-      <a href="CHANGELOG.html" class="md-nav__link">
+      <a href="../CHANGELOG.md" class="md-nav__link">
         
   
   
@@ -1227,8 +1227,8 @@
 <h1 id="cli-reference">CLI Reference</h1>
 <p>The <code>cmc</code> tool provides a powerful command-line interface to manage and execute AI-driven extensions.</p>
 <h2 id="general-usage">General Usage</h2>
-<pre><code class="language-bash">cmc [options] &lt;command&gt; [args]...
-</code></pre>
+<div class="highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>cmc<span class="w"> </span><span class="o">[</span>options<span class="o">]</span><span class="w"> </span>&lt;command&gt;<span class="w"> </span><span class="o">[</span>args<span class="o">]</span>...
+</span></code></pre></div>
 <h3 id="global-options">Global Options</h3>
 <table>
 <thead>
@@ -1418,24 +1418,24 @@
 </tbody>
 </table>
 <h3 id="usage-example">Usage Example</h3>
-<pre><code class="language-bash"># 1. Enter the interactive shell
-cmc shell
-
-# 2. Inside the shell, run a CMC command (with tab completion)
-cmc&gt; version
-
-# 3. Set a session variable for a plugin
-cmc&gt; set MODEL_NAME=gpt-4o
-
-# 4. Run a command that uses that variable
-cmc&gt; doctor
-
-# 5. View recent history
-cmc&gt; h 5
-
-# 6. Exit the shell
-cmc&gt; exit
-</code></pre>
+<div class="highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># 1. Enter the interactive shell</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>cmc<span class="w"> </span>shell
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="c1"># 2. Inside the shell, run a CMC command (with tab completion)</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>cmc&gt;<span class="w"> </span>version
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="c1"># 3. Set a session variable for a plugin</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>cmc&gt;<span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="nv">MODEL_NAME</span><span class="o">=</span>gpt-4o
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="c1"># 4. Run a command that uses that variable</span>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>cmc&gt;<span class="w"> </span>doctor
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="c1"># 5. View recent history</span>
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>cmc&gt;<span class="w"> </span>h<span class="w"> </span><span class="m">5</span>
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>
+</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="c1"># 6. Exit the shell</span>
+</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>cmc&gt;<span class="w"> </span><span class="nb">exit</span>
+</span></code></pre></div>
 <h3 id="technical-implementation-developer-note">Technical Implementation (Developer Note)</h3>
 <p>The shell is implemented using <code>prompt_toolkit</code> for the frontend and <code>click</code> for command execution. 
 - <strong>Command Collection</strong>: The shell recursively traverses the <code>click.Group</code> hierarchy of the main CLI to build a flat list of all available command paths.
@@ -1448,9 +1448,9 @@ cmc&gt; exit
 <p><strong>Example:</strong>
 - <code>telemetry.path</code> $\rightarrow$ <code>CMC_TELEMETRY_PATH</code>
 - <code>logging.level</code> $\rightarrow$ <code>CMC_LOGGING_LEVEL</code></p>
-<pre><code class="language-bash"># Override log level for a single execution
-CMC_LOGGING_LEVEL=DEBUG cmc doctor
-</code></pre>
+<div class="highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Override log level for a single execution</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nv">CMC_LOGGING_LEVEL</span><span class="o">=</span>DEBUG<span class="w"> </span>cmc<span class="w"> </span>doctor
+</span></code></pre></div>
 <h2 id="logging-and-debugging">Logging and Debugging</h2>
 <p>You can control the granularity of the output using the <code>CMC_LOGGING_LEVEL</code> environment variable or the <code>--debug</code> flag.</p>
 <h3 id="log-levels">Log Levels</h3>
@@ -1461,9 +1461,9 @@ CMC_LOGGING_LEVEL=DEBUG cmc doctor
 <li><code>DEBUG</code>: Detailed diagnostic information, including extension loading and validation steps.</li>
 </ul>
 <h3 id="usage">Usage</h3>
-<pre><code class="language-bash"># Using the CLI flag
-cmc --debug doctor
-</code></pre>
+<div class="highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Using the CLI flag</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>cmc<span class="w"> </span>--debug<span class="w"> </span>doctor
+</span></code></pre></div>
 
 
 
