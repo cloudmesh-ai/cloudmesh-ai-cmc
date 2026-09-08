@@ -52,3 +52,4 @@ category = "foundation"
 status = "stable"
 
 order = 10
+essential = true
