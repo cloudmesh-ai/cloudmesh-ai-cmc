@@ -51,3 +51,4 @@ include = ["cloudmesh*"]
 category = "foundation"
 status = "stable"
 
+order = 10
