@@ -59,6 +59,7 @@ class TreeEngine:
         self.internal_ignore = {
             "__pycache__",
             ".git",
+            ".github",
             ".idea",
             ".DS_Store",
             "node_modules",
@@ -72,8 +73,20 @@ class TreeEngine:
             "dist",
             "build",
             "PKG-INFO",
-            "*-info",
-            ".gitignore"
+            "*egg-info",
+            "site",
+            ".gitignore",
+            "css",
+            "theme",
+            "*.png",
+            "*.jpg",
+            "*.jpeg",
+            "*.gif",
+            "*.bmp",
+            "*.svg",
+            "*.webp",
+            "*.ico",
+            "*.log",
         }
 
     def _parse_patterns(self, pattern_str):
@@ -148,7 +161,7 @@ class TreeEngine:
 
             # Print item name
             style = "[bold blue]" if item.is_dir() else "[green]"
-            console.print(f"{prefix}{connector}{style}{item.name}[/]")
+            console.print(f"[black]{prefix}{connector}[/]{style}{item.name}[/]")
 
             # Collect files for preview if requested
             if self.show_content and item.is_file():
@@ -167,13 +180,14 @@ class TreeEngine:
                 if lines:
                     filename = path.name
                     
-                    console.print(f"{prefix}=============================")
-                    console.print(f"{prefix}{filename}")
-                    console.print(f"{prefix}---------------------------------------")
+                    console.print(f"[black]{prefix}=============================[/]")
+                    console.print(f"[black]{prefix}[/]{filename}")
+                    console.print(f"[black]{prefix}---------------------------------------[/]")
                     for line in lines:
-                        # ADD markup=False HERE to prevent Rich from parsing file code as styling tags
-                        console.print(f"{prefix}{line.rstrip()}", markup=False)
-                    console.print(f"{prefix}=============================")
+                        # Use a separate call for the prefix to maintain styling while keeping content raw
+                        console.print(f"[black]{prefix}[/]", end="")
+                        console.print(line.rstrip(), markup=False)
+                    console.print(f"[black]{prefix}=============================[/]")
         except (UnicodeDecodeError, PermissionError):
             pass
 
