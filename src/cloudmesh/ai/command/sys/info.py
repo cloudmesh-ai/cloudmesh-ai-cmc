@@ -36,7 +36,7 @@ def sys_info():
         )
 
         table.add_column("Attribute", style="blue", width=25)
-        table.add_column("Value", style="white")
+        table.add_column("Value", style="black")
 
         # Sort keys for consistent display
         for key in sorted(info.keys()):

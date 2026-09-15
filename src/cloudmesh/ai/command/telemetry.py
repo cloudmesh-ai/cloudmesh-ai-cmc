@@ -120,7 +120,7 @@ def telemetry_list(command, status, since, export):
     table.add_column("Timestamp", style="cyan")
     table.add_column("Command", style="green")
     table.add_column("Status", style="yellow")
-    table.add_column("Message", style="white")
+    table.add_column("Message", style="black")
 
     for r in filtered_records:
         table.add_row(
